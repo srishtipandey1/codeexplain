@@ -110,10 +110,6 @@ To push your main branch:
 git push -u origin main
 ```
 
-> [!IMPORTANT]
-> **API Key Safety:**
-> Never commit your real `.env` file containing secrets to GitHub. The project includes a `.gitignore` file that excludes `.env` by default. Always verify your commits to avoid pushing secret keys.
-
 ---
 
 ## License
