@@ -247,11 +247,15 @@ ${code}
 
 export async function chatAboutCode(code: string, language: string, history: ChatMessage[], message: string): Promise<string> {
   const systemPrompt = `You are CodeExplain AI, a conversational AI code exploration assistant.
-You are helping a developer deeply explore, refactor, and understand code in a three-column IDE layout.
-Be concise, clear, and extremely accurate. Highlight line numbers or variable dependencies where appropriate.
-Avoid fluffy intros or marketing buzzwords. Use professional technical terms, and keep explanations elegant and markdown-friendly.`;
+Help the developer understand and work with the code provided.
+Be accurate and concise. Answer only the latest question, using the recent conversation only when needed for context.
+Use plain text without Markdown headings, hashtags, emojis, generic introductions, or repeated conclusions.
+Use short lists only when they make the answer clearer. For code requests, include only a minimal complete solution and essential explanation.`;
 
-  const chatHistory = history.map(h => `${h.role === 'user' ? 'User' : 'CodeExplain AI'}: ${h.content}`).join('\n');
+  const chatHistory = history.slice(-6).map(h => {
+    const content = h.content.slice(0, h.role === 'user' ? 2000 : 1200);
+    return `${h.role === 'user' ? 'User' : 'CodeExplain AI'}: ${content}`;
+  }).join('\n');
 
   const userPrompt = `Code context:
 Language: ${language}
@@ -259,11 +263,11 @@ Language: ${language}
 ${code}
 \`\`\`
 
-Chat history:
+Recent conversation (context only; do not imitate prior response formatting):
 ${chatHistory}
 
 New User Question: ${message}
-Your Response (in elegant Markdown):`;
+Answer the latest question directly. Use concise plain text: no Markdown headings, hashtags, emojis, generic introductions, or repeated conclusions. Use a short list only when it improves clarity. If code or tests are requested, provide a minimal complete solution and omit unrequested test plans, coverage summaries, and tables.`;
 
   return await callGroqAPI(systemPrompt, userPrompt, false);
 }

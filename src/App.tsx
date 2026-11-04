@@ -390,7 +390,8 @@ Keep it elegant, technical, and directly focused on the function.`
       });
 
       if (!response.ok) {
-        throw new Error('Analysis pipeline failed to compile.');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `Analysis request failed (${response.status}).`);
       }
 
       const report: AnalysisReport = await response.json();
@@ -414,8 +415,8 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
         }
       ]);
     } catch (err) {
-      console.error(err);
-      alert('Failed to analyze the code. Please check your network or Groq credentials.');
+      console.error('Analysis request failed:', err);
+      alert(err instanceof Error ? err.message : 'Failed to analyze the code. Check the server output for details.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -869,7 +870,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                 { label: 'Why is this O(n)?', query: 'Explain the formal time and space complexity and tell me why it is bounded by O(n).' },
                 { label: 'Can this be optimized?', query: 'Can you write a more optimized version of this code to reduce execution overhead?' },
                 { label: 'Rewrite recursively', query: 'Show me how to rewrite this code using recursive calls instead of iterative loops.' },
-                { label: 'Generate tests', query: 'Please generate a robust unit test suite covering normal, mock, and edge case parameters.' }
+                { label: 'Generate tests', query: 'Generate a concise, runnable test suite for this code. Return only the complete test code; omit headings, a test plan, coverage summaries, and tables.' }
               ].map((pill, idx) => (
                 <button
                   key={idx}
