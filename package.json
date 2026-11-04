@@ -9,7 +9,7 @@
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/services/projectSearch.test.ts"
+    "test": "tsx --test src/services/projectSearch.test.ts src/services/aiSearch.test.ts src/services/groqSearch.test.ts src/services/searchEvaluation.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

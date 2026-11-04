@@ -15,6 +15,7 @@ import InteractiveVisualization from './components/InteractiveVisualization';
 import QuizPanel from './components/QuizPanel';
 import ExportUtility from './components/ExportUtility';
 import ProjectSearch from './components/ProjectSearch';
+import SearchEvaluationPanel from './components/SearchEvaluationPanel';
 import { AnalysisReport, QuizQuestion, ChatMessage } from './types/analysis';
 
 export default function App() {
@@ -40,7 +41,7 @@ export default function App() {
   // Analysis Result cache
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
-  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'search' | 'overview' | 'explanation' | 'quality' | 'optimize' | 'visuals' | 'quiz'>('overview');
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'search' | 'evaluation' | 'overview' | 'explanation' | 'quality' | 'optimize' | 'visuals' | 'quiz'>('overview');
   const [pendingSearchJump, setPendingSearchJump] = useState<{ path: string; line: number } | null>(null);
 
   // Click-to-Explain inline state
@@ -931,7 +932,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
           
           {/* Analysis Menu Tabs */}
           <div role="tablist" className="flex shrink-0 overflow-x-auto border-b border-zinc-200 bg-white px-2 dark:border-zinc-800 dark:bg-zinc-950/70 select-none">
-            {(['search', 'overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
+            {(['search', 'evaluation', 'overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveAnalysisTab(tab)}
@@ -943,13 +944,13 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                     : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
                 }`}
               >
-                {tab === 'search' ? 'Search' : tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
+                {tab === 'search' ? 'Search' : tab === 'evaluation' ? 'Eval' : tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
               </button>
             ))}
           </div>
 
           <div className="analysis-panel flex-1 overflow-y-auto bg-zinc-50/70 dark:bg-zinc-950/30">
-            {isAnalyzing && activeAnalysisTab !== 'search' ? (
+            {isAnalyzing && activeAnalysisTab !== 'search' && activeAnalysisTab !== 'evaluation' ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -975,7 +976,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   />
                 </div>
               </div>
-            ) : !analysisReport && activeAnalysisTab !== 'search' ? (
+            ) : !analysisReport && activeAnalysisTab !== 'search' && activeAnalysisTab !== 'evaluation' ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <Sparkles className="h-12 w-12 text-zinc-400 dark:text-zinc-600 mb-4" />
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
@@ -997,6 +998,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                     ? 'h-full'
                     : 'analysis-content p-5 flex flex-col gap-6'}
                 >
+                  {activeAnalysisTab === 'evaluation' && <SearchEvaluationPanel />}
                   {activeAnalysisTab === 'search' && (
                     <ProjectSearch
                       files={files}

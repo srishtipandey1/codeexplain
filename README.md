@@ -64,7 +64,7 @@ Use the contextual chat to ask questions about a snippet, a function, its variab
 
 ### Search your project in natural language
 
-Search the currently loaded project with questions such as “where is user input validated?” Queries are rewritten locally to remove question framing and generic code-search filler, then ranked with BM25 and code-aware identifier tokenization. Search runs in the browser against the files you have loaded; it does not send source code or documentation to the AI provider. Markdown (`.md`, `.mdx`), reStructuredText (`.rst`), and text (`.txt`) files are searchable separately from code. Markdown headings are used to form sections; other docs are chunked into bounded text sections. This is lexical information retrieval rather than embedding-based vector search. The Search panel also surfaces heuristic code concepts—such as input validation, error handling, and sorting—with file counts; selecting a concept starts a focused search.
+Search the currently loaded project with questions such as “where is user input validated?” Queries are normalized locally (stop-word removal, identifier splitting, and lightweight stemming) and ranked with BM25. Optionally, Groq generates alternate natural-language queries on demand; only the query text is sent to the server/provider, while loaded source files and documentation remain in the browser. The AI step is an LLM-based query expansion component, not an embedding model. Markdown (`.md`, `.mdx`), reStructuredText (`.rst`), and text (`.txt`) files are searchable separately from code. Markdown headings are used to form sections; other docs are chunked into bounded text sections. This is lexical information retrieval rather than embedding-based vector search. The Search panel also surfaces heuristic code concepts—such as input validation, error handling, and sorting—with file counts; selecting a concept starts a focused search. The Evaluation tab runs a fixed, human-labeled code-and-documentation benchmark and reports Precision@3 (relevant fraction in the top three), Recall@3 (fraction of known relevant items retrieved), Mean Reciprocal Rank (first-relevant-result position), and NDCG@3 (rank-discounted gain). Its 11-query, six-file fixture corpus is a reproducible smoke test, not evidence of general retrieval quality; serious comparisons need more human-judged queries from representative projects. The current benchmark evaluates the local BM25 baseline, not the optional LLM expansions.
 
 ### Learn and improve
 
@@ -84,7 +84,7 @@ CodeExplain uses a two-part analysis workflow:
 2. **Language-model pass:** the server sends the code and relevant local context to Groq's chat-completions API. The configured Llama model generates explanations and other requested outputs.
 3. **Interactive exploration:** the application presents the returned analysis in its editor and workspace, where you can ask follow-up questions or request another analysis.
 
-Natural-language project search is a separate, browser-local workflow. It splits loaded source files into declaration-oriented chunks and uses BM25 with code-aware tokenization and lightweight concept expansion to rank matches. It also labels chunks with heuristic concepts based on source-code tokens and aggregates those into clickable, file-counted concepts in the Search panel. Search does not require an AI API key.
+Natural-language project search runs a transparent NLP/retrieval pipeline: it normalizes query text, splits camelCase identifiers, applies lightweight suffix normalization and stop-word removal, chunks code by declarations and documentation by headings, and ranks candidates with BM25. A heuristic concept lexicon supports related programming terms. Optional Groq-based query expansion generates alternative phrasings on demand; only the query is sent to Groq, never the loaded files. The baseline works without an AI key; the expansion action needs `GROQ_API_KEY`.
 
 ```mermaid
 flowchart LR
@@ -96,7 +96,7 @@ flowchart LR
     F -->|Follow-up question| D
 ```
 
-The local parser is intentionally lightweight: its metrics and extracted structure are useful context, but they are not a full compiler-grade abstract syntax tree or a guarantee of semantic correctness. The AI component uses prompts to produce natural-language analysis. Project search uses lexical BM25 ranking and concept expansion; it does not currently implement embeddings, vector search, or a separately trained NLP model.
+The local parser is intentionally lightweight: its metrics and extracted structure are useful context, but they are not a full compiler-grade abstract syntax tree or a guarantee of semantic correctness. The AI analysis and optional search-query expansion use prompts to produce natural-language outputs. Retrieval itself uses lexical BM25 ranking and a small concept lexicon; the project does not currently implement embeddings, vector search, or a separately trained NLP model.
 
 ## Supported languages
 
