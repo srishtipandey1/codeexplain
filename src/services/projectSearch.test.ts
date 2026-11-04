@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FileItem } from '../components/FileExplorer';
-import { buildProjectSearchIndex, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from './projectSearch';
+import { buildProjectSearchIndex, expandSearchQueryLocally, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from './projectSearch';
 
 const files: FileItem[] = [
   {
@@ -62,6 +62,12 @@ test('rewrites natural-language framing into concise, deduplicated search terms'
   assert.equal(rewriteSearchQuery('show me user input, user input'), 'user input');
   assert.equal(rewriteSearchQuery('where do we handle errors'), 'handle error');
   assert.equal(rewriteSearchQuery('please show me code'), '');
+});
+
+test('generates deterministic local query suggestions from programming concepts', () => {
+  assert.deepEqual(expandSearchQueryLocally('where is input validated'), ['validate input']);
+  assert.deepEqual(expandSearchQueryLocally('where are exceptions caught and failures handled'), ['error handling']);
+  assert.deepEqual(expandSearchQueryLocally('where do colors change'), []);
 });
 
 test('searches with the rewritten query terms', () => {

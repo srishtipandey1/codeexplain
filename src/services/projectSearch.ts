@@ -189,6 +189,21 @@ export function rewriteSearchQuery(query: string): string {
   return [...new Set(tokenize(query).filter(token => !QUERY_FILLER_WORDS.has(token)))].join(' ');
 }
 
+export function expandSearchQueryLocally(query: string): string[] {
+  const queryTerms = new Set(tokenize(query));
+  const matchingGroups = CONCEPT_GROUPS.filter(group => {
+    const groupTerms = group.terms.flatMap(tokenize);
+    return [...queryTerms].some(term =>
+      groupTerms.some(alias => term === alias || (term.length >= 4 && alias.startsWith(term.slice(0, 4))))
+    );
+  });
+  const rewrittenQuery = rewriteSearchQuery(query);
+
+  return [...new Set(matchingGroups.map(group => group.query))]
+    .filter(expansion => rewriteSearchQuery(expansion) !== rewrittenQuery)
+    .slice(0, 3);
+}
+
 export function searchProjectIndex(
   index: ProjectSearchIndex,
   query: string,

@@ -11,8 +11,7 @@ import {
   explainComplexity,
   generateFlowchart,
   generateTests,
-  chatAboutCode,
-  expandCodeSearchQuery
+  chatAboutCode
 } from './src/services/groq';
 
 async function startServer() {
@@ -26,24 +25,6 @@ async function startServer() {
   // Helper endpoint to check API health
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
-  });
-
-  // POST /api/search/expand
-  app.post('/api/search/expand', async (req, res) => {
-    try {
-      const { query } = req.body;
-      if (typeof query !== 'string' || !query.trim()) {
-        return res.status(400).json({ error: 'A non-empty search query is required.' });
-      }
-      if (query.length > 500) {
-        return res.status(400).json({ error: 'Search queries must be 500 characters or fewer.' });
-      }
-      const queries = await expandCodeSearchQuery(query.trim());
-      res.json({ queries });
-    } catch (error: unknown) {
-      console.error('Error in /api/search/expand:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : 'AI query expansion failed.' });
-    }
   });
 
   // POST /api/analyze
