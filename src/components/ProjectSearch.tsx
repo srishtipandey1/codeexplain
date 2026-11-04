@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowUpRight, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUpRight, LoaderCircle, Search, Sparkles } from 'lucide-react';
 import type { FileItem } from './FileExplorer';
+import { expandSearchQuery } from '../services/aiSearch';
 import { buildProjectSearchIndex, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex, type ProjectSearchKind } from '../services/projectSearch';
 
 interface ProjectSearchProps {
@@ -17,6 +18,11 @@ const EXAMPLE_QUERIES = [
 
 export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProps) {
   const [query, setQuery] = useState('');
+  const [aiExpansions, setAiExpansions] = useState<string[]>([]);
+  const [isExpandingQuery, setIsExpandingQuery] = useState(false);
+  const [expansionError, setExpansionError] = useState('');
+  const activeQueryRef = useRef(query);
+  activeQueryRef.current = query;
   const [searchKind, setSearchKind] = useState<ProjectSearchKind | 'all'>('all');
   const searchIndex = useMemo(() => buildProjectSearchIndex(files), [files]);
   const concepts = useMemo(() => extractProjectConcepts(searchIndex), [searchIndex]);
@@ -42,6 +48,28 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
   }, [files]);
   const searchedFileCount = searchKind === 'all' ? fileCounts.code + fileCounts.documentation : fileCounts[searchKind];
 
+  useEffect(() => {
+    setAiExpansions([]);
+    setExpansionError('');
+  }, [query]);
+
+  const handleAIExpansion = async () => {
+    if (!query.trim() || isExpandingQuery) return;
+    const submittedQuery = query.trim();
+    setIsExpandingQuery(true);
+    setExpansionError('');
+    try {
+      const expansions = await expandSearchQuery(submittedQuery);
+      if (activeQueryRef.current.trim() === submittedQuery) setAiExpansions(expansions);
+    } catch (error) {
+      if (activeQueryRef.current.trim() === submittedQuery) {
+        setExpansionError(error instanceof Error ? error.message : 'AI query expansion failed.');
+      }
+    } finally {
+      setIsExpandingQuery(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <header>
@@ -65,6 +93,38 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
           className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-3 text-sm text-zinc-800 outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-violet-500"
         />
       </label>
+
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={handleAIExpansion}
+          disabled={!query.trim() || isExpandingQuery}
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/70"
+        >
+          {isExpandingQuery ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          {isExpandingQuery ? 'Expanding with AI…' : 'Expand query with AI'}
+        </button>
+        {expansionError && (
+          <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{expansionError}</p>
+        )}
+        {aiExpansions.length > 0 && (
+          <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900 dark:bg-violet-950/20">
+            <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">AI-generated query alternatives</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {aiExpansions.map(expansion => (
+                <button
+                  key={expansion}
+                  type="button"
+                  onClick={() => setQuery(expansion)}
+                  className="rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-left text-xs text-zinc-700 hover:border-violet-400 dark:border-violet-900 dark:bg-zinc-900 dark:text-zinc-300"
+                >
+                  {expansion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Search scope">
         {([
@@ -192,7 +252,7 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
       )}
 
       <p className="border-t border-zinc-200 pt-4 text-xs leading-5 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-        Queries are simplified locally; BM25 ranks matching code chunks. Source stays in this workspace.
+        Local BM25 ranks code and documentation. AI expansion sends only your query to Groq; loaded files stay in the browser.
       </p>
     </div>
   );

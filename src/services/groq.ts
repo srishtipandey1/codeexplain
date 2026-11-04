@@ -147,6 +147,38 @@ async function callGroqAPI(
   }
 }
 
+export async function expandCodeSearchQuery(query: string): Promise<string[]> {
+  const response = await callGroqAPI(
+    'You are an information-retrieval query expansion assistant. Produce exactly three concise alternate search queries that preserve the user\'s intent while using useful synonyms, domain terminology, and likely code identifiers. Do not answer the query, invent project-specific facts, or include explanation.',
+    `Original search query: ${query}`,
+    {
+      type: 'json_schema',
+      json_schema: {
+        name: 'search_query_expansion',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            queries: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['queries'],
+          additionalProperties: false,
+        },
+      },
+    },
+  );
+
+  if (!Array.isArray(response.queries) || !response.queries.every((item: unknown) => typeof item === 'string')) {
+    throw new Error('The AI search expansion response was not a valid query list.');
+  }
+  const queries = new Set<string>();
+  for (const item of response.queries) {
+    if (typeof item === 'string' && item.trim() && item.trim().length <= 200) queries.add(item.trim());
+  }
+  if (queries.size === 0) throw new Error('The AI did not return any usable query alternatives.');
+  return [...queries].slice(0, 3);
+}
+
 export async function analyzeCode(code: string, language: string, localParsedData: any): Promise<AnalysisReport> {
   const systemPrompt = `You are a world-class Staff Software Engineer and AI Code Auditor.
 Analyze the provided code and return a high-fidelity code explanation report as a JSON object.
