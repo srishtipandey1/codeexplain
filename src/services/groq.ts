@@ -8,7 +8,101 @@ export function getGroqApiKey(): string {
   return key;
 }
 
-async function callGroqAPI(systemPrompt: string, userPrompt: string, jsonFormat: boolean = true): Promise<any> {
+const ANALYSIS_REPORT_SCHEMA = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'code_analysis_report',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        language: { type: 'string' },
+        overview: {
+          type: 'object',
+          properties: {
+            purpose: { type: 'string' },
+            howItWorks: { type: 'string' },
+            executionFlow: { type: 'string' },
+          },
+          required: ['purpose', 'howItWorks', 'executionFlow'],
+          additionalProperties: false,
+        },
+        explanation: {
+          type: 'object',
+          properties: {
+            stepByStep: { type: 'array', items: { type: 'string' } },
+            lineByLine: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  line: { type: 'integer' },
+                  code: { type: 'string' },
+                  explanation: { type: 'string' },
+                },
+                required: ['line', 'code', 'explanation'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['stepByStep', 'lineByLine'],
+          additionalProperties: false,
+        },
+        complexity: {
+          type: 'object',
+          properties: {
+            time: { type: 'string' },
+            space: { type: 'string' },
+            timeExplanation: { type: 'string' },
+            spaceExplanation: { type: 'string' },
+          },
+          required: ['time', 'space', 'timeExplanation', 'spaceExplanation'],
+          additionalProperties: false,
+        },
+        quality: {
+          type: 'object',
+          properties: {
+            bugs: { type: 'array', items: { type: 'string' } },
+            edgeCases: { type: 'array', items: { type: 'string' } },
+            securityConcerns: { type: 'array', items: { type: 'string' } },
+            performanceImprovements: { type: 'array', items: { type: 'string' } },
+            cleanCodeSuggestions: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['bugs', 'edgeCases', 'securityConcerns', 'performanceImprovements', 'cleanCodeSuggestions'],
+          additionalProperties: false,
+        },
+        refactored: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+            changes: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['code', 'changes'],
+          additionalProperties: false,
+        },
+        personas: {
+          type: 'object',
+          properties: {
+            beginner: { type: 'string' },
+            expert: { type: 'string' },
+            interview: { type: 'string' },
+          },
+          required: ['beginner', 'expert', 'interview'],
+          additionalProperties: false,
+        },
+        summary: { type: 'string' },
+      },
+      required: ['language', 'overview', 'explanation', 'complexity', 'quality', 'refactored', 'personas', 'summary'],
+      additionalProperties: false,
+    },
+  },
+};
+
+async function callGroqAPI(
+  systemPrompt: string,
+  userPrompt: string,
+  responseFormat: Record<string, unknown> | null = { type: 'json_object' }
+): Promise<any> {
   const apiKey = getGroqApiKey();
   const url = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -21,8 +115,8 @@ async function callGroqAPI(systemPrompt: string, userPrompt: string, jsonFormat:
     temperature: 0.1,
   };
 
-  if (jsonFormat) {
-    body.response_format = { type: 'json_object' };
+  if (responseFormat) {
+    body.response_format = responseFormat;
   }
 
   try {
@@ -43,7 +137,7 @@ async function callGroqAPI(systemPrompt: string, userPrompt: string, jsonFormat:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
 
-    if (jsonFormat) {
+    if (responseFormat) {
       return JSON.parse(content);
     }
     return content;
@@ -95,8 +189,7 @@ The JSON response MUST strictly follow this typescript schema:
   "summary": string
 }
 
-Make sure "lineByLine" matches the code exact line indices. Generate explanations for critical lines or ALL lines if the code is short.
-Provide accurate Big-O complex notations, detailed bugs/edge-cases, and production-grade explanation personas.`;
+Keep every field concise. Include line-by-line explanations for at most 12 important lines, using their exact 1-based line numbers. Limit each quality list to 3 specific findings; use an empty list when there are none. Provide accurate Big-O complexity and short, useful personas.`;
 
   const userPrompt = `Language: ${language}
 Code to analyze:
@@ -107,7 +200,7 @@ ${code}
 Metrics already calculated locally for context:
 ${JSON.stringify(localParsedData.metrics, null, 2)}`;
 
-  const aiResult = await callGroqAPI(systemPrompt, userPrompt, true);
+  const aiResult = await callGroqAPI(systemPrompt, userPrompt, ANALYSIS_REPORT_SCHEMA);
 
   // Blend local metrics/symbols/graphs with LLM output
   return {
@@ -147,7 +240,7 @@ Code:
 ${code}
 \`\`\``;
 
-  const result = await callGroqAPI(systemPrompt, userPrompt, true);
+  const result = await callGroqAPI(systemPrompt, userPrompt);
   return result.questions || [];
 }
 
@@ -168,7 +261,7 @@ Code:
 ${code}
 \`\`\``;
 
-  return await callGroqAPI(systemPrompt, userPrompt, true);
+  return await callGroqAPI(systemPrompt, userPrompt);
 }
 
 export async function refactorCode(code: string, language: string): Promise<{ refactoredCode: string; changes: string[]; designPatternsUsed: string[] }> {
@@ -186,7 +279,7 @@ Code:
 ${code}
 \`\`\``;
 
-  return await callGroqAPI(systemPrompt, userPrompt, true);
+  return await callGroqAPI(systemPrompt, userPrompt);
 }
 
 export async function explainComplexity(code: string, language: string): Promise<{ timeComplexity: string; spaceComplexity: string; detailedProof: string; worstCase: string; bestCase: string; averageCase: string }> {
@@ -207,7 +300,7 @@ Code:
 ${code}
 \`\`\``;
 
-  return await callGroqAPI(systemPrompt, userPrompt, true);
+  return await callGroqAPI(systemPrompt, userPrompt);
 }
 
 export async function generateFlowchart(code: string, language: string): Promise<{ mermaidCode: string; stepNodes: Array<{ id: string; label: string; details: string }> }> {
@@ -224,7 +317,7 @@ Code:
 ${code}
 \`\`\``;
 
-  return await callGroqAPI(systemPrompt, userPrompt, true);
+  return await callGroqAPI(systemPrompt, userPrompt);
 }
 
 export async function generateTests(code: string, language: string): Promise<{ testSuiteCode: string; coverageEstimation: string; testCases: Array<{ name: string; description: string; expectedResult: string }> }> {
@@ -242,7 +335,7 @@ Code:
 ${code}
 \`\`\``;
 
-  return await callGroqAPI(systemPrompt, userPrompt, true);
+  return await callGroqAPI(systemPrompt, userPrompt);
 }
 
 export async function chatAboutCode(code: string, language: string, history: ChatMessage[], message: string): Promise<string> {
@@ -269,5 +362,5 @@ ${chatHistory}
 New User Question: ${message}
 Answer the latest question directly. Use concise plain text: no Markdown headings, hashtags, emojis, generic introductions, or repeated conclusions. Use a short list only when it improves clarity. If code or tests are requested, provide a minimal complete solution and omit unrequested test plans, coverage summaries, and tables.`;
 
-  return await callGroqAPI(systemPrompt, userPrompt, false);
+  return await callGroqAPI(systemPrompt, userPrompt, null);
 }
