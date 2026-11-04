@@ -68,7 +68,7 @@ export default function InteractiveVisualization({
             </span>
           )}
           {node.line && (
-            <span className="ml-auto text-[9px] text-zinc-400 dark:text-zinc-500 font-normal">
+            <span className="ml-auto text-[11px] text-zinc-400 dark:text-zinc-500 font-normal">
               Line {node.line}
             </span>
           )}
@@ -111,14 +111,14 @@ export default function InteractiveVisualization({
   return (
     <div className="flex h-full flex-col bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
       {/* Tab Selectors */}
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 bg-white dark:bg-zinc-900/60">
         <div className="flex gap-1.5">
           <button
             onClick={() => setActiveTab('graph')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === 'graph'
-                ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
-                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+                : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
             }`}
           >
             <Network className="h-3.5 w-3.5" />
@@ -126,10 +126,10 @@ export default function InteractiveVisualization({
           </button>
           <button
             onClick={() => setActiveTab('ast')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === 'ast'
-                ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
-                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+                : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
             }`}
           >
             <Code className="h-3.5 w-3.5" />
@@ -137,10 +137,10 @@ export default function InteractiveVisualization({
           </button>
           <button
             onClick={() => setActiveTab('flow')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === 'flow'
-                ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
-                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+                : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
             }`}
           >
             <Layers className="h-3.5 w-3.5" />
@@ -150,33 +150,33 @@ export default function InteractiveVisualization({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto p-4 min-h-[360px]">
+      <div className="min-h-[320px] flex-1 overflow-auto bg-zinc-50/70 p-4 dark:bg-zinc-950/30">
         {activeTab === 'graph' && (
           <div className="flex flex-col h-full">
             {/* Graph sub tab togglers */}
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex border border-zinc-200 dark:border-zinc-800 rounded p-0.5 bg-zinc-100/50 dark:bg-zinc-950/40">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
                 {(['call', 'dependency', 'imports'] as const).map(type => (
                   <button
                     key={type}
                     onClick={() => setActiveGraphType(type)}
-                    className={`px-2 py-1 text-[10px] rounded font-semibold capitalize ${
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium capitalize ${
                       activeGraphType === type
-                        ? 'bg-white dark:bg-zinc-800 shadow-sm text-zinc-900 dark:text-zinc-50'
-                        : 'text-zinc-400 hover:text-zinc-650'
+                        ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+                        : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
                     }`}
                   >
                     {type === 'call' ? 'Call Graph' : type === 'dependency' ? 'Dependency Graph' : 'Imports Graph'}
                   </button>
                 ))}
               </div>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
-                <Info className="h-3 w-3" /> Hover nodes to trace links
+              <span className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <Info className="h-3.5 w-3.5" /> Hover a node to trace connections
               </span>
             </div>
 
             {/* Vector Graph Display */}
-            <div className="relative flex-1 rounded border border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/40 min-h-[300px] flex items-center justify-center overflow-hidden">
+            <div className="relative flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60 min-h-[300px] flex items-center justify-center">
               <svg className="w-full h-full min-h-[290px]" viewBox="0 0 500 360">
                 {/* Arrowhead markers */}
                 <defs>
@@ -212,7 +212,7 @@ export default function InteractiveVisualization({
                           x={(sourcePos.x + targetPos.x) / 2}
                           y={(sourcePos.y + targetPos.y) / 2 - 10}
                           fill="#4f46e5"
-                          className="text-[9px] font-mono font-bold text-center"
+                          className="text-[10px] font-mono font-medium text-center"
                           textAnchor="middle"
                         >
                           {edge.label}
@@ -271,7 +271,7 @@ export default function InteractiveVisualization({
                       />
                       <text
                         y="22"
-                        className="text-[9px] font-mono font-semibold fill-zinc-700 dark:fill-zinc-300 pointer-events-none"
+                        className="text-[10px] font-mono font-medium fill-zinc-700 dark:fill-zinc-300 pointer-events-none"
                         textAnchor="middle"
                       >
                         {node.label}
@@ -283,10 +283,10 @@ export default function InteractiveVisualization({
 
               {/* Node explanation overlays */}
               {selectedNode && (
-                <div className="absolute bottom-2 left-2 right-2 rounded bg-white/90 border border-zinc-200 p-2 text-[10px] dark:bg-zinc-950/90 dark:border-zinc-800 flex items-center justify-between">
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-lg border border-zinc-200 bg-white/95 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950/95">
                   <div className="flex flex-col">
                     <span className="font-bold text-zinc-800 dark:text-zinc-200">Selected Node: {selectedNode}</span>
-                    <span className="text-zinc-500">Trace highlighted links above for calling connections.</span>
+                    <span className="text-xs text-zinc-500">Trace highlighted links above for calling connections.</span>
                   </div>
                   <button onClick={() => setSelectedNode(null)} className="rounded px-1.5 py-0.5 border border-zinc-200 text-zinc-500 hover:text-zinc-800">Clear</button>
                 </div>
@@ -299,18 +299,18 @@ export default function InteractiveVisualization({
           <div className="flex flex-col h-full">
             {/* AST search bar */}
             <div className="relative mb-3.5">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search AST nodes (e.g. FunctionDeclaration, main)..."
                 value={astSearch}
                 onChange={e => setAstSearch(e.target.value)}
-                className="w-full rounded border border-zinc-200 bg-zinc-50/50 pl-8 pr-3 py-2 text-xs outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/30 dark:text-zinc-100"
+                className="w-full rounded-lg border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none transition-colors focus:border-violet-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
               />
             </div>
 
             {/* AST Tree view */}
-            <div className="border border-zinc-200 rounded p-3 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/40 min-h-[280px]">
+            <div className="min-h-[280px] rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
               <ASTNodeComponent node={ast} depth={0} />
             </div>
           </div>
@@ -318,8 +318,11 @@ export default function InteractiveVisualization({
 
         {activeTab === 'flow' && (
           <div className="flex flex-col gap-4">
-            <span className="text-xs text-zinc-500">Simplified high-level execution flow sequence:</span>
-            <div className="relative border border-zinc-200 rounded p-4 bg-zinc-50/30 dark:border-zinc-800 dark:bg-zinc-950/20 flex flex-col gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Execution flow</h3>
+              <p className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">A simplified view of the typical runtime sequence.</p>
+            </div>
+            <div className="relative flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/60">
               {/* Timeline Steps */}
               {[
                 { step: 1, title: 'Execution Init', desc: 'Environment bootstrap and runtime load.' },
@@ -331,12 +334,12 @@ export default function InteractiveVisualization({
                   {idx < arr.length - 1 && (
                     <div className="absolute left-4 top-8 bottom-[-16px] w-0.5 bg-zinc-200 dark:bg-zinc-800" />
                   )}
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold font-mono text-zinc-800 dark:text-zinc-200 shrink-0">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-50 text-sm font-semibold text-violet-700 dark:border dark:border-zinc-700 dark:bg-violet-950/50 dark:text-violet-300 shrink-0">
                     {flowStep.step}
                   </div>
                   <div className="flex flex-col pt-1">
-                    <span className="text-xs font-bold text-zinc-850 dark:text-zinc-100">{flowStep.title}</span>
-                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">{flowStep.desc}</span>
+                    <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{flowStep.title}</span>
+                    <span className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">{flowStep.desc}</span>
                   </div>
                 </div>
               ))}

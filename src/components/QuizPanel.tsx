@@ -48,22 +48,23 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
   };
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 p-5">
-      <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-5 dark:border-zinc-800">
-        <div className="flex items-center gap-2">
-          <HelpCircle className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-          <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-            Interactive Quiz Mode
+    <div className="flex h-full flex-col bg-zinc-50/70 p-5 dark:bg-zinc-950/30">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-800">
+        <div>
+          <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Knowledge check</p>
+          <h3 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Quick quiz
           </h3>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Test your understanding of the current code.</p>
         </div>
         
         {/* Difficulty Picker */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value as any)}
             disabled={isLoading}
-            className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none dark:border-zinc-800 dark:bg-zinc-950 font-semibold text-zinc-700 dark:text-zinc-200 shadow-sm transition-all"
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 outline-none transition-colors focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
           >
             <option value="easy">Easy Mode</option>
             <option value="medium">Medium Mode</option>
@@ -72,7 +73,7 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
           <button
             onClick={() => onGenerateQuiz(difficulty)}
             disabled={isLoading}
-            className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:opacity-50 dark:bg-violet-500 dark:hover:bg-violet-400 cursor-pointer"
           >
             {isLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             Generate
@@ -84,39 +85,39 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <RefreshCw className="h-10 w-10 animate-spin text-violet-500 mb-4" />
-            <span className="text-sm font-bold text-zinc-500 dark:text-zinc-400">Generating analytical questions from code...</span>
+            <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Preparing questions from your code...</span>
           </div>
         ) : questions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-zinc-200 rounded-2xl dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 px-6">
-            <Award className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mb-4" />
-            <h4 className="text-sm font-extrabold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">No active quiz.</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm leading-relaxed">
-              Select a difficulty level and click 'Generate' to create a custom conceptual test based on your current editor code!
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-16 text-center dark:border-zinc-700 dark:bg-zinc-900/50">
+            <Award className="mb-4 h-10 w-10 text-violet-400 dark:text-violet-500" />
+            <h4 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">Ready when you are</h4>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+              Choose a difficulty and generate a short quiz based on the code in your editor.
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-5">
             {/* Scorecard banner */}
             {isSubmitted && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-5 rounded-2xl border border-zinc-250 bg-zinc-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/40 shadow-sm"
+                className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60"
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400 font-mono text-xl font-extrabold shrink-0 shadow-inner">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300 font-mono text-base font-semibold shrink-0">
                   {score}/{questions.length}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                     {score === questions.length ? 'Perfect Score!' : score >= questions.length / 2 ? 'Great Job!' : 'Keep Practicing!'}
                   </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                  <span className="mt-1 text-sm leading-5 text-zinc-500 dark:text-zinc-400">
                     Your answers have been checked. Scroll below to read thorough logic explanations.
                   </span>
                 </div>
                 <button
                   onClick={handleReset}
-                  className="ml-auto flex items-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-bold hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-850 transition-colors cursor-pointer"
+                  className="ml-auto flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   <RefreshCw className="h-4 w-4" /> Retry
                 </button>
@@ -129,29 +130,29 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
               const isCorrect = selectedOpt === q.correctAnswer;
               
               return (
-                <div key={q.id} className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-zinc-50/25 p-5 dark:border-zinc-850 shadow-sm">
+                <div key={q.id} className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
                   {/* Type Label */}
-                  <div className="flex items-center justify-between border-b border-zinc-100/60 pb-2 dark:border-zinc-800/40">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600 bg-violet-50 dark:text-violet-400 dark:bg-violet-950/40 px-2.5 py-1 rounded-md">
-                      {q.type.replace('_', ' ')}
+                  <div className="flex items-center justify-between border-b border-zinc-100 pb-3 dark:border-zinc-800">
+                    <span className="rounded-md bg-violet-50 px-2.5 py-1 text-xs font-medium capitalize text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+                      {q.type.replaceAll('_', ' ')}
                     </span>
-                    <span className="text-xs font-bold text-zinc-400 font-mono">Question {idx + 1}</span>
+                    <span className="text-xs font-medium text-zinc-500">Question {idx + 1}</span>
                   </div>
 
                   {/* Question Title */}
-                  <p className="text-sm font-bold text-zinc-800 dark:text-zinc-105 leading-relaxed">
+                  <p className="text-base font-medium leading-6 text-zinc-800 dark:text-zinc-100">
                     {q.question}
                   </p>
 
                   {/* Code snippet display inside quiz */}
                   {q.codeSnippet && (
-                    <pre className="rounded-xl bg-zinc-950 p-4 text-xs font-mono text-zinc-100 overflow-x-auto border border-zinc-850 shadow-inner">
+                    <pre className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs leading-5 text-zinc-100">
                       <code>{q.codeSnippet}</code>
                     </pre>
                   )}
 
                   {/* Options List */}
-                  <div className="flex flex-col gap-3 mt-1">
+                  <div className="mt-1 flex flex-col gap-2">
                     {q.options?.map((opt, optIdx) => {
                       const isOptionSelected = selectedOpt === opt;
                       const isThisCorrectOpt = opt === q.correctAnswer;
@@ -180,7 +181,7 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
                           key={optIdx}
                           disabled={isSubmitted}
                           onClick={() => handleSelectOption(q.id, opt)}
-                          className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-sm text-left font-bold transition-all cursor-pointer ${optionStyle}`}
+                          className={`flex items-center justify-between rounded-lg border px-3.5 py-3 text-left text-sm font-medium leading-5 transition-colors cursor-pointer ${optionStyle}`}
                         >
                           <span className="truncate pr-4">{opt}</span>
                           {iconIndicator}
@@ -194,12 +195,12 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
                     <motion.div
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-3 rounded-xl bg-zinc-100/60 p-4 text-xs text-zinc-650 dark:bg-zinc-950/40 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-850 flex gap-3 shadow-sm"
+                      className="mt-1 flex gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/50 dark:text-zinc-300"
                     >
                       <AlertCircle className="h-5 w-5 text-zinc-400 shrink-0 mt-0.5" />
                       <div className="flex flex-col">
-                        <span className="font-extrabold text-zinc-800 dark:text-zinc-200">Explanation</span>
-                        <span className="mt-1 leading-relaxed text-zinc-600 dark:text-zinc-300">{q.explanation}</span>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">Explanation</span>
+                        <span className="mt-1 leading-6 text-zinc-600 dark:text-zinc-300">{q.explanation}</span>
                       </div>
                     </motion.div>
                   )}
@@ -212,7 +213,7 @@ export default function QuizPanel({ questions, isLoading, onGenerateQuiz }: Quiz
               <button
                 onClick={handleSubmit}
                 disabled={Object.keys(userAnswers).length < questions.length}
-                className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-extrabold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 mt-3 transition-all cursor-pointer shadow-md active:scale-[0.99]"
+                className="mt-2 w-full rounded-lg bg-violet-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-violet-500 dark:hover:bg-violet-400 cursor-pointer"
               >
                 Submit Answers ({Object.keys(userAnswers).length} / {questions.length})
               </button>

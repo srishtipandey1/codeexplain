@@ -909,23 +909,25 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
         <aside className="w-full md:flex flex-col overflow-hidden" style={{ width: `${rightPanelWidth}px` }}>
           
           {/* Analysis Menu Tabs */}
-          <div className="flex border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40 select-none">
+          <div role="tablist" className="flex shrink-0 overflow-x-auto border-b border-zinc-200 bg-white px-2 dark:border-zinc-800 dark:bg-zinc-950/70 select-none">
             {(['overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveAnalysisTab(tab)}
-                className={`flex-1 py-3 text-center text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                aria-selected={activeAnalysisTab === tab}
+                role="tab"
+                className={`shrink-0 px-3 py-3.5 text-center text-xs font-semibold capitalize border-b-2 transition-colors cursor-pointer ${
                   activeAnalysisTab === tab
-                    ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100 bg-white/40 dark:bg-zinc-900/40'
-                    : 'border-transparent text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 hover:bg-white/20 dark:hover:bg-zinc-900/20'
+                    ? 'border-violet-600 text-violet-700 dark:border-violet-400 dark:text-violet-300'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
                 }`}
               >
-                {tab}
+                {tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
               </button>
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="analysis-panel flex-1 overflow-y-auto bg-zinc-50/70 dark:bg-zinc-950/30">
             {isAnalyzing ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <motion.div
@@ -970,7 +972,9 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.12 }}
-                  className="p-4 flex flex-col gap-5"
+                  className={activeAnalysisTab === 'quiz' || activeAnalysisTab === 'visuals'
+                    ? 'h-full'
+                    : 'analysis-content p-5 flex flex-col gap-6'}
                 >
                   
                   {/* OVERVIEW TAB */}
@@ -1043,25 +1047,35 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
 
                   {/* EXPLANATIONS TAB */}
                   {activeAnalysisTab === 'explanation' && (
-                    <div className="flex flex-col gap-4">
-                      {/* Step-by-Step list */}
-                      <div className="flex flex-col gap-2">
-                        <span className="text-xs font-semibold uppercase text-zinc-500 tracking-widest">Step-by-Step Logic</span>
-                        <div className="flex flex-col gap-2 mt-1">
-                          {analysisReport.explanation.stepByStep.map((step, idx) => (
-                            <div key={idx} className="flex gap-3 items-start p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                              <span className="h-5 w-5 bg-zinc-100 border border-zinc-200 text-zinc-650 rounded-full flex items-center justify-center font-mono text-[10px] font-bold dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 shrink-0">{idx + 1}</span>
-                              <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">{step}</p>
-                            </div>
-                          ))}
-                        </div>
+                    <div className="flex flex-col gap-6">
+                      <div>
+                        <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Code walkthrough</p>
+                        <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Understand the logic</h2>
+                        <p className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">A guided explanation of the main steps and important lines.</p>
                       </div>
 
-                      {/* Line-by-Line explanations preview list */}
-                      <div className="flex flex-col gap-2">
-                        <span className="text-xs font-semibold uppercase text-zinc-500 tracking-widest">Critical Line Analysis</span>
-                        <div className="flex flex-col border border-zinc-200 rounded overflow-hidden dark:border-zinc-800 bg-zinc-50/30">
-                          {analysisReport.explanation.lineByLine.slice(0, 8).map((l, idx) => (
+                      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Step by step</h3>
+                        <div className="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                          {(analysisReport.explanation?.stepByStep ?? []).map((step, idx) => (
+                            <div key={idx} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-50 text-xs font-semibold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">{idx + 1}</span>
+                              <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">{step}</p>
+                            </div>
+                          ))}
+                          {(analysisReport.explanation?.stepByStep?.length ?? 0) === 0 && (
+                            <p className="py-2 text-sm text-zinc-500 dark:text-zinc-400">Step-by-step explanation is unavailable for this analysis.</p>
+                          )}
+                        </div>
+                      </section>
+
+                      <section>
+                        <div className="mb-3">
+                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Key lines</h3>
+                          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Select a line to jump to it in the editor.</p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {(analysisReport.explanation?.lineByLine ?? []).slice(0, 8).map((l, idx) => (
                             <div 
                               key={idx} 
                               onClick={() => {
@@ -1071,130 +1085,149 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                                 }
                                 handleEditorLineClick(l.line);
                               }}
-                              className="flex flex-col p-3 border-b border-zinc-200 hover:bg-zinc-100 cursor-pointer dark:border-zinc-850 dark:hover:bg-zinc-850"
+                              className="group flex cursor-pointer flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-3.5 transition-colors hover:border-violet-300 hover:bg-violet-50/40 dark:border-zinc-800 dark:bg-zinc-900/60 dark:hover:border-violet-800 dark:hover:bg-violet-950/20"
                             >
-                              <div className="flex justify-between items-center">
-                                <span className="font-mono text-[10px] text-zinc-500 font-bold">Line {l.line}</span>
-                                <span className="text-[8px] font-mono font-bold text-zinc-400">Click to jump</span>
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-xs font-medium text-violet-700 dark:text-violet-300">Line {l.line}</span>
+                                <span className="text-xs text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100">Open in editor</span>
                               </div>
-                              <code className="font-mono text-[10px] text-zinc-800 bg-zinc-100 rounded px-1.5 py-0.5 mt-1 dark:bg-zinc-900 dark:text-zinc-200 truncate">
+                              <code className="overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-zinc-100 px-2.5 py-2 font-mono text-xs text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
                                 {l.code}
                               </code>
-                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{l.explanation}</p>
+                              <p className="text-sm leading-5 text-zinc-600 dark:text-zinc-400">{l.explanation}</p>
+                            </div>
+                          ))}
+                          {(analysisReport.explanation?.lineByLine?.length ?? 0) === 0 && (
+                            <p className="rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">No line-by-line explanations were returned.</p>
+                          )}
+                        </div>
+                      </section>
+
+                      <section>
+                        <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Different perspectives</h3>
+                        <div className="flex flex-col gap-2">
+                          {[
+                            ['Beginner', analysisReport.personas?.beginner],
+                            ['Technical', analysisReport.personas?.expert],
+                            ['Interview prep', analysisReport.personas?.interview],
+                          ].map(([label, explanation]) => (
+                            <div key={label} className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                              <h4 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</h4>
+                              <p className="mt-1.5 text-sm leading-6 text-zinc-600 dark:text-zinc-400">{explanation || `No ${label.toLowerCase()} explanation was returned.`}</p>
                             </div>
                           ))}
                         </div>
-                      </div>
-
-                      {/* Educational Cognitive Personas */}
-                      <div className="flex flex-col gap-2.5">
-                        <span className="text-xs font-semibold uppercase text-zinc-500 tracking-widest">Target Explanations</span>
-                        <div className="rounded border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-                          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block mb-1">Beginner Mode (ELIF10)</span>
-                          <p className="text-[11px] text-zinc-600 dark:text-zinc-350 leading-relaxed">{analysisReport.personas.beginner}</p>
-                        </div>
-                        <div className="rounded border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-                          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block mb-1">Expert Systems Engineer</span>
-                          <p className="text-[11px] text-zinc-600 dark:text-zinc-350 leading-relaxed">{analysisReport.personas.expert}</p>
-                        </div>
-                        <div className="rounded border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-                          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block mb-1">FAANG Technical Interview preparation</span>
-                          <p className="text-[11px] text-zinc-600 dark:text-zinc-350 leading-relaxed">{analysisReport.personas.interview}</p>
-                        </div>
-                      </div>
+                      </section>
                     </div>
                   )}
 
                   {/* QUALITY & DIAGNOSTICS TAB */}
                   {activeAnalysisTab === 'quality' && (
-                    <div className="flex flex-col gap-4">
-                      {/* Potential Bugs */}
-                      <div className="rounded border border-red-200 bg-red-50/10 p-4 dark:border-red-900/20">
-                        <span className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                          <ShieldAlert className="h-4 w-4 shrink-0" /> Potential Defects & Bugs
-                        </span>
-                        <div className="flex flex-col gap-1.5 mt-2.5">
-                          {analysisReport.quality.bugs.length === 0 ? (
-                            <span className="text-[10px] text-zinc-400">No core logic defects identified.</span>
+                    <div className="flex flex-col gap-5">
+                      <div>
+                        <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Review notes</p>
+                        <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Code quality</h2>
+                        <p className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">Potential risks and practical improvements based on this code.</p>
+                      </div>
+                      {([
+                        { title: 'Potential bugs', items: analysisReport.quality?.bugs ?? [], tone: 'red', empty: 'No likely bugs were identified.' },
+                        { title: 'Edge cases', items: analysisReport.quality?.edgeCases ?? [], tone: 'amber', empty: 'No notable edge cases were identified.' },
+                        { title: 'Security', items: analysisReport.quality?.securityConcerns ?? [], tone: 'blue', empty: 'No specific security concerns were identified.' },
+                        { title: 'Maintainability', items: analysisReport.quality?.cleanCodeSuggestions ?? [], tone: 'violet', empty: 'No maintainability suggestions were returned.' },
+                      ] as const).map(section => (
+                        <section key={section.title} className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{section.title}</h3>
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              section.items.length
+                                ? section.tone === 'red'
+                                  ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300'
+                                  : section.tone === 'amber'
+                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                                    : section.tone === 'blue'
+                                      ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300'
+                                      : 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+                                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                            }`}>
+                              {section.items.length ? `${section.items.length} notes` : 'Clear'}
+                            </span>
+                          </div>
+                          {section.items.length ? (
+                            <ul className="mt-3 space-y-2.5">
+                              {section.items.map((item, idx) => (
+                                <li key={idx} className="flex gap-2.5 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
                           ) : (
-                            analysisReport.quality.bugs.map((bug, idx) => (
-                              <p key={idx} className="text-[11px] text-zinc-650 dark:text-zinc-300 leading-relaxed">&bull; {bug}</p>
-                            ))
+                            <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">{section.empty}</p>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Edge Cases */}
-                      <div className="rounded border border-orange-200 bg-orange-50/10 p-4 dark:border-orange-900/20">
-                        <span className="text-xs font-bold text-orange-600 dark:text-orange-400 block">Out-of-Bound Edge Cases</span>
-                        <div className="flex flex-col gap-1.5 mt-2">
-                          {analysisReport.quality.edgeCases.map((edge, idx) => (
-                            <p key={idx} className="text-[11px] text-zinc-650 dark:text-zinc-300 leading-relaxed">&bull; {edge}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Security concerns */}
-                      <div className="rounded border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/30">
-                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">Security Analysis</span>
-                        <div className="flex flex-col gap-1.5 mt-2">
-                          {analysisReport.quality.securityConcerns.map((sec, idx) => (
-                            <p key={idx} className="text-[11px] text-zinc-650 dark:text-zinc-300 leading-relaxed">&bull; {sec}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Clean code suggestions */}
-                      <div className="rounded border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/30">
-                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">SOLID & Clean Code Principles</span>
-                        <div className="flex flex-col gap-1.5 mt-2">
-                          {analysisReport.quality.cleanCodeSuggestions.map((suggestion, idx) => (
-                            <p key={idx} className="text-[11px] text-zinc-650 dark:text-zinc-300 leading-relaxed">&bull; {suggestion}</p>
-                          ))}
-                        </div>
-                      </div>
+                        </section>
+                      ))}
                     </div>
                   )}
 
                   {/* OPTIMIZE TAB */}
                   {activeAnalysisTab === 'optimize' && (
-                    <div className="flex flex-col gap-4">
-                      {/* Performance Suggestions */}
-                      <div className="rounded border border-emerald-200 bg-emerald-50/10 p-4 dark:border-emerald-900/20">
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                          <Cpu className="h-4 w-4 shrink-0" /> Execution Speed & Performance
-                        </span>
-                        <div className="flex flex-col gap-1.5 mt-2.5">
-                          {analysisReport.quality.performanceImprovements.map((opt, idx) => (
-                            <p key={idx} className="text-[11px] text-zinc-650 dark:text-zinc-300 leading-relaxed">&bull; {opt}</p>
-                          ))}
-                        </div>
+                    <div className="flex flex-col gap-5">
+                      <div>
+                        <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Suggestions</p>
+                        <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Optimization</h2>
+                        <p className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">Review the trade-offs before applying any generated changes.</p>
                       </div>
 
-                      {/* Comparison view or Refactored version code */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase text-zinc-400 tracking-wider">Refactored Version</span>
+                      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Performance opportunities</h3>
+                        </div>
+                        {(analysisReport.quality?.performanceImprovements?.length ?? 0) > 0 ? (
+                          <ul className="mt-3 space-y-2.5">
+                            {analysisReport.quality.performanceImprovements.map((opt, idx) => (
+                              <li key={idx} className="flex gap-2.5 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-500" />
+                                {opt}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">No performance suggestions were returned.</p>
+                        )}
+                      </section>
+
+                      <section>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Suggested implementation</h3>
+                            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">AI-generated refactoring for comparison.</p>
+                          </div>
                           <button
                             onClick={handleApplyRefactoring}
-                            className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:border-zinc-400 dark:border-zinc-850 dark:bg-zinc-900 dark:text-zinc-300 transition-colors"
+                            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-violet-700 dark:hover:text-violet-300"
                           >
-                            <Copy className="h-3 w-3" /> Apply to Editor
+                            <Copy className="h-3.5 w-3.5" /> Apply
                           </button>
                         </div>
-                        <pre className="rounded bg-zinc-950 p-4 text-[10.5px] font-mono text-zinc-100 overflow-x-auto border border-zinc-800 max-h-[300px]">
-                          <code>{analysisReport.refactored.code}</code>
+                        <pre className="max-h-[360px] overflow-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs leading-6 text-zinc-100 dark:border-zinc-800">
+                          <code>{analysisReport.refactored?.code || 'No alternative implementation was returned.'}</code>
                         </pre>
                         
-                        <div className="rounded border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-950/20 flex flex-col gap-1.5">
-                          <span className="text-[10px] font-bold text-zinc-500 uppercase">Key improvements made</span>
-                          <div className="flex flex-col gap-1 mt-1">
-                            {analysisReport.refactored.changes.map((change, idx) => (
-                              <p key={idx} className="text-[11px] text-zinc-650 dark:text-zinc-350">&bull; {change}</p>
-                            ))}
+                        {(analysisReport.refactored?.changes?.length ?? 0) > 0 && (
+                          <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">What changed</h4>
+                            <ul className="mt-2 space-y-2">
+                              {analysisReport.refactored.changes.map((change, idx) => (
+                                <li key={idx} className="flex gap-2.5 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400" />
+                                  {change}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                        </div>
-                      </div>
+                        )}
+                      </section>
                     </div>
                   )}
 
@@ -1235,9 +1268,11 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   )}
 
                   {/* EXPORT OPTIONS */}
-                  <div className="mt-4 border-t border-zinc-200/60 pt-4 dark:border-zinc-800">
-                    <ExportUtility report={analysisReport} />
-                  </div>
+                  {activeAnalysisTab === 'overview' && (
+                    <div className="mt-2 border-t border-zinc-200 pt-5 dark:border-zinc-800">
+                      <ExportUtility report={analysisReport} />
+                    </div>
+                  )}
 
                 </motion.div>
               </AnimatePresence>
