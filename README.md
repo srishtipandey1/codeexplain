@@ -1,118 +1,171 @@
+<div align="center">
+
 # CodeExplain
 
-### An NLP-assisted workbench for understanding code
+### Understand code. Follow the flow. Learn by exploring.
 
-CodeExplain turns source code into clear explanations, structural insights, and learning tools. Explore a snippet in the editor, inspect its symbols and metrics, ask questions in plain language, and use AI-generated walkthroughs to make unfamiliar code easier to reason about.
+An interactive code workbench that combines practical code analysis, optional AI explanations, and **local NLP-powered project search**.
 
-The project combines lightweight, local code parsing with a large language model (LLM). Local analysis extracts approximate code structure and metrics; language-model features translate that context into human-readable explanations, suggestions, diagrams, and quizzes.
+<br />
 
-> **In short:** bring code you want to understand; leave with a clearer picture of what it does, how it is organized, and what to investigate next.
+![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
+![NLP search](https://img.shields.io/badge/NLP-BM25%20%7C%20local-7C3AED)
+![License](https://img.shields.io/badge/license-not%20specified-lightgrey)
+
+<br />
+
+[Get started](#-get-started) · [Explore features](#-what-you-can-do) · [Understand the NLP](#-the-nlp-search-pipeline) · [Free locally, optional AI](#-free-locally-ai-is-optional)
+
+</div>
 
 ---
 
-## Contents
+## The idea
 
-- [Why CodeExplain](#why-codeexplain)
-- [What you can do](#what-you-can-do)
-- [How it works](#how-it-works)
-- [Supported languages](#supported-languages)
-- [Get started](#get-started)
-- [Configure the AI provider](#configure-the-ai-provider)
-- [Run in development](#run-in-development)
-- [Build and run for production](#build-and-run-for-production)
-- [API overview](#api-overview)
-- [Technology](#technology)
-- [Project structure](#project-structure)
-- [Privacy and responsible use](#privacy-and-responsible-use)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+CodeExplain helps turn an unfamiliar file into something you can reason about. Explore code in an editor, inspect its structure, ask questions in plain language, and move between explanations, quality observations, optimization ideas, visuals, and quizzes.
 
-## Why CodeExplain
+It also includes a distinct, **free-to-run local NLP search and evaluation workflow**. Search project code and documentation with natural-language queries, see how queries are normalized, and measure a BM25 baseline with standard information-retrieval metrics—all without sending your project to an AI provider.
 
-Reading code is more than recognizing syntax. Developers need to connect functions, data, control flow, edge cases, and complexity—and then communicate that understanding to someone else.
+> **Built to explore, not to replace your judgment.** Parsing is heuristic, and generated explanations or recommendations should always be checked against the source.
 
-CodeExplain is designed to help with that process:
+## ✨ What you can do
 
-- **Understand:** turn dense or unfamiliar code into step-by-step explanations.
-- **Navigate:** inspect extracted symbols and code relationships in a visual workspace.
-- **Question:** ask focused questions about code in natural language.
-- **Learn:** generate code-specific quizzes and explanations at different levels.
-- **Review:** surface possible quality concerns and ideas for optimization or refactoring.
+| Explore | Explain | Search |
+|:--|:--|:--|
+| Browse and edit project files in an interactive workspace. Inspect extracted symbols, relationships, and approximate code metrics. | Ask for plain-language walkthroughs, step-by-step explanations, contextual Q&A, and function-focused help. | Find code and docs by intent with local BM25 retrieval. Inspect normalized terms, browse programming concepts, and get deterministic local query suggestions. |
+| **Review** possible quality issues and edge cases. | **Learn** with code-specific quizzes and explanations. | **Evaluate** the local search baseline with a labeled benchmark. |
+| **Visualize** code relationships and flow. | **Improve** code with optional refactoring and optimization suggestions. | **Stay local:** search and evaluation make no AI-provider requests. |
 
-CodeExplain is an exploratory assistant, not a compiler, static-analysis authority, or substitute for code review. Treat generated explanations and recommendations as helpful starting points and verify them against the source.
+### Search code the way you think about it
 
-## What you can do
+Ask questions like:
 
-### Explore code in context
+- `where is user input validated?`
+- `how are errors handled?`
+- `find sorting logic`
+- `how do I configure deployment?`
 
-- Work with code in the editor and file explorer.
-- Detect common languages from file extensions, with simple content-based fallbacks.
-- Inspect approximate local metrics, extracted symbols, and code relationship graphs.
-- Use the analysis workspace to move between overview, explanation, quality, optimization, visualization, and quiz views.
+Search covers code and project documentation (`.md`, `.mdx`, `.rst`, and `.txt`). Filter by code, docs, or both; jump from a result to its file and source location; or select a detected concept to start a focused search.
 
-### Turn code into explanations
+## 🧠 The NLP search pipeline
 
-- Get a plain-language overview of a snippet and its execution flow.
-- Review step-by-step and line-oriented explanations.
-- Explore the same code from beginner, expert, or interview-preparation perspectives.
-- Select a function or code line for more focused context.
-
-### Ask code questions
-
-Use the contextual chat to ask questions about a snippet, a function, its variables, or its behavior. Chat requests include the selected code and conversation history so responses can stay grounded in the current context.
-
-### Search your project in natural language
-
-Search the currently loaded project with questions such as “where is user input validated?” Queries are normalized locally (stop-word removal, identifier splitting, and lightweight stemming) and ranked with BM25. **Search, query suggestions, and evaluation run locally without an API key, external AI service, or usage charge.** The “Suggest related terms (local)” action uses a small, deterministic programming-concept vocabulary; it is not an LLM or embedding model. Markdown (`.md`, `.mdx`), reStructuredText (`.rst`), and text (`.txt`) files are searchable separately from code. Markdown headings are used to form sections; other docs are chunked into bounded text sections. This is lexical information retrieval rather than embedding-based vector search. The Search panel also surfaces heuristic code concepts—such as input validation, error handling, and sorting—with file counts; selecting a concept starts a focused search. The Evaluation tab runs a fixed, human-labeled code-and-documentation benchmark and reports Precision@3 (relevant fraction in the top three), Recall@3 (fraction of known relevant items retrieved), Mean Reciprocal Rank (first-relevant-result position), and NDCG@3 (rank-discounted gain). Its 11-query, six-file fixture corpus is a reproducible smoke test, not evidence of general retrieval quality; serious comparisons need more human-judged queries from representative projects. The benchmark evaluates the local BM25 baseline.
-
-### Learn and improve
-
-- Generate multiple-choice and code-reasoning quiz questions.
-- Request refactoring ideas and an alternative code sample.
-- Request performance-oriented optimization suggestions.
-- Review time and space complexity estimates.
-- Generate Mermaid flowchart descriptions and candidate test suites.
-
-These are AI-generated suggestions. CodeExplain does not execute generated code or guarantee that suggested changes, tests, complexity estimates, or security observations are correct.
-
-## How it works
-
-CodeExplain combines local analysis and optional provider-backed features:
-
-1. **Local structural pass:** the server detects a likely language and runs lightweight, language-aware heuristics to estimate metrics and extract symbols and graph data.
-2. **Language-model pass:** when an LLM-backed feature is requested, the server sends the code and relevant context to Groq's chat-completions API. This is separate from project search and may be subject to the provider's current quotas or pricing.
-3. **Local project search:** query normalization, curated concept-based suggestions, BM25 ranking, and benchmark evaluation run on your machine without contacting an AI provider.
-4. **Interactive exploration:** the application presents analysis in its editor and workspace, where you can ask follow-up questions or request another analysis.
-
-Natural-language project search runs a transparent NLP/retrieval pipeline: it normalizes query text, splits camelCase identifiers, applies lightweight suffix normalization and stop-word removal, chunks code by declarations and documentation by headings, and ranks candidates with BM25. A curated programming-concept lexicon supports related terms and suggestions. This search pipeline is deterministic, local, and free to run; it does not call Groq or send project data over the network.
+The search experience is deliberately transparent and deterministic. It uses classical information retrieval techniques rather than a hosted model:
 
 ```mermaid
 flowchart LR
-    A[Source code] --> B[Language detection]
-    B --> C[Local metrics and structure]
-    C --> D[Optional Groq-hosted language model]
-    D --> E[Explanations and suggestions]
-    C --> G[Local BM25 project search and evaluation]
-    E --> F[Interactive CodeExplain workspace]
-    G --> F
-    F -->|Follow-up question| D
+    Q["Natural-language query"] --> N["Normalize<br/>stop words · identifiers · suffixes"]
+    N --> C["Local concept vocabulary"]
+    C --> R["BM25 ranking"]
+    D["Loaded code and docs"] --> K["Chunk declarations and sections"]
+    K --> R
+    R --> H["Ranked results with source locations"]
+    R --> E["Labeled benchmark metrics"]
 ```
 
-The local parser is intentionally lightweight: its metrics and extracted structure are useful context, but they are not a full compiler-grade abstract syntax tree or a guarantee of semantic correctness. The LLM-backed analysis uses prompts to produce natural-language outputs and requires a configured provider API key. Retrieval uses lexical BM25 ranking and a small concept lexicon; the project does not currently implement embeddings, vector search, or a separately trained NLP model.
+| Stage | What happens |
+|:--|:--|
+| **Normalize** | Lowercase and tokenize text, split camelCase identifiers, remove common filler words, and apply lightweight suffix normalization. |
+| **Connect concepts** | A small curated programming vocabulary relates terms such as *exception*, *catch*, and *failure*. Suggestions come from this local vocabulary—not from an LLM. |
+| **Build the index** | Code is split into declaration-oriented chunks; Markdown is sectioned by headings, while other supported docs use bounded text chunks. |
+| **Rank** | BM25 scores matching chunks using term frequency and document frequency, then returns the strongest matches. |
+| **Evaluate** | A fixed, human-labeled smoke benchmark reports Precision@3, Recall@3, MRR, and NDCG@3 for the local BM25 baseline. |
 
-## Supported languages
+<details>
+<summary><strong>What the evaluation numbers mean</strong></summary>
 
-Language detection currently recognizes these extensions:
+- **Precision@3** — the fraction of the top three results judged relevant.
+- **Recall@3** — the fraction of known relevant items retrieved in the top three.
+- **MRR** — the reciprocal rank of the first relevant result, averaged across queries.
+- **NDCG@3** — a rank-sensitive score that gives more credit to relevant results appearing earlier.
 
-| Language | Recognized extensions |
-|---|---|
+The included benchmark has **11 queries and six fixture files**. It is reproducible and useful as a smoke test; it is **not** evidence of broad real-world accuracy. More representative comparisons require a larger, carefully judged dataset. The benchmark evaluates local BM25—not optional AI analysis.
+
+</details>
+
+## 💸 Free locally; AI is optional
+
+**You can run local project search, query suggestions, and evaluation without an API key, external AI service, or provider usage charge.** Those features run in the application and do not send loaded project files to Groq.
+
+The app also has existing LLM-backed explanation, chat, quiz, refactoring, optimization, and related generation features. These require a Groq API key and send the relevant code and prompts to Groq. **They are separate from local search; provider quotas and pricing depend on your account and may change.** Check the current terms for your account before using them. You can skip AI setup entirely if you only want the free local workflow.
+
+## 🚀 Get started
+
+### Requirements
+
+- Node.js 18 or newer
+- npm
+- Optional: a Groq API key for provider-backed AI features
+
+### Install and run
+
+```bash
+git clone https://github.com/srishtipandey1/codeexplain.git
+cd codeexplain
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000**.
+
+> **No API key needed to try local search or evaluation.** You can skip the optional AI setup below.
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/srishtipandey1/codeexplain.git
+Set-Location .\codeexplain
+npm install
+npm run dev
+```
+
+### Optional AI setup
+
+To enable the provider-backed AI features, create a `.env` file in the project root and add your Groq credentials:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+Or copy the example template and edit it:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Keep `.env` private: do not commit API keys. Review the current Groq account limits and pricing before making requests.
+
+## 🛠️ Common commands
+
+| Command | Purpose |
+|:--|:--|
+| `npm run dev` | Start the Express server with Vite development middleware. |
+| `npm test` | Run local project-search and retrieval-evaluation tests. |
+| `npm run lint` | Run the TypeScript check. |
+| `npm run build` | Build the frontend and bundle the production server. |
+| `npm run start` | Serve the production build on port `3000`. |
+
+Production run:
+
+```bash
+npm run build
+npm run start
+```
+
+## 🌍 Language recognition
+
+CodeExplain recognizes common source-file extensions. Detection is heuristic and does not mean every language construct is parsed with equal depth.
+
+| Language | Extensions |
+|:--|:--|
 | Python | `.py`, `.ipynb` |
 | JavaScript | `.js`, `.jsx`, `.mjs` |
 | TypeScript | `.ts`, `.tsx` |
 | Java | `.java` |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp` |
 | C | `.c`, `.h` |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp` |
 | Go | `.go` |
 | Rust | `.rs` |
 | Kotlin | `.kt`, `.kts` |
@@ -120,184 +173,125 @@ Language detection currently recognizes these extensions:
 | PHP | `.php` |
 | Ruby | `.rb`, `.gemspec` |
 
-When a filename does not identify a language, a small set of source-pattern checks is used, with JavaScript as the fallback. Recognition does not imply that every language feature is parsed or analyzed with equal depth.
+## 🏗️ Architecture
 
-## Get started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18 or newer
-- npm (included with Node.js)
-- Optional: a Groq API key for existing LLM-backed analysis, chat, and generation features. Local search and evaluation do not need it.
-
-### Clone and install
-
-```bash
-git clone https://github.com/srishtipandey1/codeexplain.git
-cd codeexplain
-npm install
+```mermaid
+flowchart TB
+    subgraph Local["Local workflow · no provider key"]
+        A["Project files"] --> B["Lightweight parsing and metrics"]
+        A --> C["NLP normalization and BM25"]
+        C --> D["Search results and evaluation"]
+        B --> E["CodeExplain workspace"]
+        D --> E
+    end
+    subgraph Optional["Optional provider-backed workflow"]
+        E -->|AI feature requested| F["Express API"]
+        F --> G["Groq chat-completions API"]
+        G --> H["Explanation or suggestion"]
+        H --> E
+    end
 ```
 
-### Optional: configure LLM-backed features
+The local parser estimates structure, symbols, and metrics; it is not a compiler-grade AST. Search uses lexical BM25 and a curated concept vocabulary. The project does not currently implement embedding-based vector search or a separately trained NLP model.
 
-Project search, local query suggestions, and the Eval tab work without an API key. To use the existing provider-backed analysis and generation features, create a `.env` file in the project root and add your Groq key:
+### Technology
 
-```env
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=openai/gpt-oss-120b
-```
+- **UI:** React 19, TypeScript, Vite 6
+- **Code editor:** Monaco Editor
+- **Styling and motion:** Tailwind CSS 4, Motion, Lucide React
+- **Server:** Node.js, Express 4
+- **Local retrieval:** BM25 and deterministic text normalization
+- **Optional AI provider:** Groq chat-completions API
 
-The repository includes an `.env.example` template. On Windows PowerShell, you can copy it with:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Then open `.env` and replace the placeholder value. Keep your real key private; do not commit it. Provider quotas and pricing can change, so check the current terms for your Groq account before making API requests.
-
-## Configure the AI provider
-
-The server reads the following environment variables:
-
-| Variable | Required | Purpose |
-|---|---:|---|
-| `GROQ_API_KEY` | Only for LLM-backed features | Authenticates requests to the Groq API. Search, local suggestions, and evaluation do not use it. |
-| `GROQ_MODEL` | No | Groq model ID. Defaults to `openai/gpt-oss-120b`. |
-| `APP_URL` | No | Present in the example template, but not currently read by the server. The server listens on port `3000`. |
-
-The existing LLM integration calls Groq's OpenAI-compatible chat-completions endpoint. The default model is `openai/gpt-oss-120b`; set `GROQ_MODEL` to another model available to your Groq account to override it. Provider usage is outside the local search pipeline; check your account's current limits and pricing.
-
-## Run in development
-
-Start the application from the project directory:
-
-```bash
-npm run dev
-```
-
-The Express server and Vite development middleware run together. Open **http://localhost:3000** in your browser.
-
-On Windows PowerShell, the full command sequence is:
-
-```powershell
-cd .\codeexplain
-npm install
-Copy-Item .env.example .env
-# Add a GROQ_API_KEY only if you want to use provider-backed AI features.
-npm run dev
-```
-
-## Build and run for production
-
-Build the frontend assets and bundle the server:
-
-```bash
-npm run build
-```
-
-Then run the production server:
-
-```bash
-npm run start
-```
-
-The production server serves the built application from `dist` and listens on port `3000`.
-
-## API overview
-
-The Express server exposes these routes:
+### API routes
 
 | Method | Route | Purpose |
-|---|---|---|
+|:--|:--|:--|
 | `GET` | `/api/health` | Basic server health check. |
-| `POST` | `/api/analyze` | Combine local metrics and structure with an AI-generated code analysis. |
-| `POST` | `/api/chat` | Ask a question about code, optionally with chat history. |
-| `POST` | `/api/quiz` | Generate code-based questions; accepts an optional difficulty. |
-| `POST` | `/api/optimize` | Request performance-oriented code suggestions. |
-| `POST` | `/api/refactor` | Request a refactored version and a summary of changes. |
+| `POST` | `/api/analyze` | Local metrics plus provider-backed code analysis. |
+| `POST` | `/api/chat` | Ask a question about code. |
+| `POST` | `/api/quiz` | Generate code-based questions. |
+| `POST` | `/api/optimize` | Request performance-oriented suggestions. |
+| `POST` | `/api/refactor` | Request a refactored version and change summary. |
 | `POST` | `/api/complexity` | Request time- and space-complexity analysis. |
 | `POST` | `/api/flowchart` | Request a Mermaid flowchart and step descriptions. |
-| `POST` | `/api/tests` | Request a candidate test suite and test-case descriptions. |
+| `POST` | `/api/tests` | Request a candidate test suite. |
 
-The analysis routes accept JSON request bodies. For example:
+Except for the health check, these routes use provider-backed features and require `GROQ_API_KEY`. Local project search and evaluation run in the browser and do not call these endpoints.
 
-```json
-{
-  "code": "function greet(name) { return `Hello, ${name}`; }",
-  "filename": "greet.js",
-  "language": "JavaScript"
-}
-```
+## 🔐 Privacy and responsible use
 
-For AI-backed routes, configure `GROQ_API_KEY` before sending requests. The server returns an error if the key is missing or the provider request fails.
+- **Local search:** loaded code and documentation are indexed and searched locally; search, suggestions, and evaluation do not contact Groq.
+- **Provider-backed AI:** relevant code and prompts are sent to Groq when you request one of those features. Do not send secrets, credentials, personal data, or code you are not authorized to share.
+- **Verify outputs:** generated explanations, complexity estimates, quality observations, tests, and refactorings can be incomplete or incorrect. Review the source and validate suggestions before relying on them.
 
-## Technology
-
-- **Frontend:** React 19, TypeScript, Vite 6
-- **Editor:** Monaco Editor
-- **Styling:** Tailwind CSS 4
-- **Motion and icons:** Motion, Lucide React
-- **Server:** Node.js, Express 4, `tsx`
-- **AI integration:** Groq chat-completions API
-- **Production bundling:** Vite and esbuild
-
-## Project structure
+## 🗂️ Project layout
 
 ```text
 codeexplain/
-├── server.ts                     # Express API and Vite/production server
-├── vite.config.ts                # Vite, React, Tailwind configuration
+├── server.ts
+├── vite.config.ts
 ├── src/
-│   ├── App.tsx                   # Main application and workspace behavior
-│   ├── main.tsx                  # React application entry point
-│   ├── index.css                 # Global styles
-│   ├── components/               # Editor workspace, search, evaluation, visualization, quiz
+│   ├── App.tsx
+│   ├── components/
+│   │   ├── ProjectSearch.tsx
+│   │   ├── SearchEvaluationPanel.tsx
+│   │   ├── FileExplorer.tsx
+│   │   └── ...
 │   ├── services/
-│   │   ├── projectSearch.ts      # Local BM25 retrieval and concept-based query suggestions
-│   │   ├── searchEvaluation.ts   # Local labeled retrieval benchmark and metrics
-│   │   ├── groq.ts               # Existing prompt construction and Groq API requests
-│   │   └── parser.ts             # Language detection and local code heuristics
+│   │   ├── projectSearch.ts
+│   │   ├── projectSearch.test.ts
+│   │   ├── searchEvaluation.ts
+│   │   ├── searchEvaluation.test.ts
+│   │   ├── groq.ts
+│   │   └── parser.ts
 │   └── types/
-│       └── analysis.ts           # Shared analysis and application types
-├── .env.example                  # Environment variable template
-└── package.json                  # Dependencies and project scripts
+├── .env.example
+└── package.json
 ```
 
-## Privacy and responsible use
+## 🧯 Troubleshooting
 
-CodeExplain runs its web application and API server locally during development. Local project search, query suggestions, and evaluation do not send data to a provider. Existing LLM-backed features send their relevant code and prompts to Groq for processing. Do not submit secrets, credentials, personal data, or code that you are not authorized to share with the configured provider. Review the provider's current data-handling terms before using those features with sensitive source code.
+<details>
+<summary><strong>Local search works, but an AI feature fails</strong></summary>
 
-AI-generated explanations, complexity estimates, quality observations, tests, and refactorings can be incomplete or incorrect. Review all outputs, run generated tests yourself, and validate suggested code changes before using them.
+Local search does not need a key. For provider-backed features, check that `.env` is in the project root, `GROQ_API_KEY` is valid, your network can reach Groq, and your account can access the configured model.
 
-## Troubleshooting
+</details>
 
-### `GROQ_API_KEY is not defined`
+<details>
+<summary><strong>The app does not open at port 3000</strong></summary>
 
-This key is needed only for provider-backed AI analysis and generation. Local search, query suggestions, and evaluation continue to work without it.
+Check that the server started successfully. If another process is already using port `3000`, stop that process or change the port in `server.ts`.
 
-### The application does not open at port 3000
+</details>
 
-Confirm that the development server started successfully. If another process is already using port `3000`, stop that process or change the server's port in `server.ts`.
+<details>
+<summary><strong>Language detection looks wrong</strong></summary>
 
-### AI requests fail
+Use a recognized file extension where possible. Content-based detection is heuristic and falls back to JavaScript when it cannot identify a language.
 
-For LLM-backed features, check that the API key is valid, your network can reach Groq, and your account can access the configured model and current usage terms. Local search does not depend on Groq.
+</details>
 
-### Language detection looks wrong
+## 🤝 Contributing
 
-Use a recognized filename extension or select the intended language in the application where available. Content-based detection is heuristic and defaults to JavaScript when it cannot identify a language.
-
-## Contributing
-
-Contributions are welcome. Before opening a pull request:
+Contributions are welcome:
 
 1. Install dependencies with `npm install`.
-2. Run the TypeScript check with `npm run lint`.
-3. Build the production bundle with `npm run build`.
-4. Describe the behavior you changed and how you verified it.
+2. Run `npm test` and `npm run lint`.
+3. Run `npm run build` for production-build validation.
+4. Describe the behavior changed and how you verified it.
 
-Please avoid committing `.env` files, API keys, or other credentials.
+Never commit `.env` files, API keys, or other credentials.
 
-## License
+## 📄 License
 
-This project is distributed under the MIT License. See the [LICENSE](./LICENSE) file if present in your checkout.
+No `LICENSE` file is currently included in this repository. Check with the maintainers before reusing or distributing the project.
+
+---
+
+<div align="center">
+
+**A practical code-understanding workspace—with a transparent, local NLP search core.**
+
+</div>
