@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, Search } from 'lucide-react';
 import type { FileItem } from './FileExplorer';
-import { buildProjectSearchIndex, searchProjectIndex } from '../services/projectSearch';
+import { buildProjectSearchIndex, rewriteSearchQuery, searchProjectIndex } from '../services/projectSearch';
 
 interface ProjectSearchProps {
   files: FileItem[];
@@ -17,6 +17,7 @@ const EXAMPLE_QUERIES = [
 export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProps) {
   const [query, setQuery] = useState('');
   const searchIndex = useMemo(() => buildProjectSearchIndex(files), [files]);
+  const rewrittenQuery = useMemo(() => rewriteSearchQuery(query), [query]);
   const results = useMemo(() => searchProjectIndex(searchIndex, query), [searchIndex, query]);
   const fileCount = useMemo(() => {
     const countFiles = (items: FileItem[]): number => items.reduce(
@@ -51,6 +52,12 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
           className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-3 text-sm text-zinc-800 outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-violet-500"
         />
       </label>
+
+      {rewrittenQuery && rewrittenQuery !== query.trim().toLowerCase() && (
+        <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          Search terms: <span className="font-mono text-zinc-700 dark:text-zinc-300">{rewrittenQuery}</span>
+        </p>
+      )}
 
       {!query.trim() ? (
         <section>
@@ -122,7 +129,7 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
       )}
 
       <p className="border-t border-zinc-200 pt-4 text-xs leading-5 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-        Ranked locally with BM25 and code-aware identifier matching. Source stays in this workspace.
+        Queries are simplified locally; BM25 ranks matching code chunks. Source stays in this workspace.
       </p>
     </div>
   );

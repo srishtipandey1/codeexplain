@@ -64,7 +64,7 @@ Use the contextual chat to ask questions about a snippet, a function, its variab
 
 ### Search your project in natural language
 
-Search the currently loaded project with questions such as “where is user input validated?” Results are ranked locally with BM25, code-aware identifier tokenization, and a small set of related programming concepts. Search runs in the browser against the files you have loaded; it does not send source code to the AI provider. This is lexical information retrieval rather than embedding-based vector search.
+Search the currently loaded project with questions such as “where is user input validated?” Queries are rewritten locally to remove question framing and generic code-search filler, then ranked with BM25 and code-aware identifier tokenization. Search runs in the browser against the files you have loaded; it does not send source code to the AI provider. This is lexical information retrieval rather than embedding-based vector search.
 
 ### Learn and improve
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FileItem } from '../components/FileExplorer';
-import { buildProjectSearchIndex, searchProjectIndex } from './projectSearch';
+import { buildProjectSearchIndex, rewriteSearchQuery, searchProjectIndex } from './projectSearch';
 
 const files: FileItem[] = [
   {
@@ -43,6 +43,22 @@ test('expands related error-handling terminology', () => {
   const results = searchProjectIndex(buildProjectSearchIndex(files), 'where do we handle errors');
 
   assert.equal(results[0]?.symbol, 'handle_error');
+});
+
+test('rewrites natural-language framing into concise, deduplicated search terms', () => {
+  assert.equal(rewriteSearchQuery('Where can I find the code that sorts a list?'), 'sort list');
+  assert.equal(rewriteSearchQuery('show me user input, user input'), 'user input');
+  assert.equal(rewriteSearchQuery('where do we handle errors'), 'handle error');
+  assert.equal(rewriteSearchQuery('please show me code'), '');
+});
+
+test('searches with the rewritten query terms', () => {
+  const results = searchProjectIndex(
+    buildProjectSearchIndex(files),
+    'Could you show me the function that sorts a list?',
+  );
+
+  assert.equal(results[0]?.symbol, 'merge_sort');
 });
 
 test('returns no results for empty or unrelated queries', () => {

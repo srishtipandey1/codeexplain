@@ -127,8 +127,17 @@ export function buildProjectSearchIndex(files: FileItem[]): ProjectSearchIndex {
   return { documents, averageLength, documentFrequencies };
 }
 
+const QUERY_FILLER_WORDS = new Set([
+  'can', 'code', 'could', 'did', 'do', 'find', 'function', 'functions', 'give', 'logic',
+  'method', 'methods', 'please', 'show', 'source', 'tell', 'that', 'we', 'you',
+]);
+
+export function rewriteSearchQuery(query: string): string {
+  return [...new Set(tokenize(query).filter(token => !QUERY_FILLER_WORDS.has(token)))].join(' ');
+}
+
 export function searchProjectIndex(index: ProjectSearchIndex, query: string, limit = 8): ProjectSearchResult[] {
-  const queryTerms = expandQueryTerms(query);
+  const queryTerms = expandQueryTerms(rewriteSearchQuery(query));
   if (queryTerms.size === 0) return [];
 
   const { documents, averageLength, documentFrequencies } = index;
