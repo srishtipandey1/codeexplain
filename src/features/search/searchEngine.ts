@@ -1,4 +1,4 @@
-import type { FileItem } from '../components/FileExplorer';
+import type { FileItem } from '../../components/FileExplorer';
 
 export type ProjectSearchKind = 'code' | 'documentation';
 

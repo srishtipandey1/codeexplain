@@ -1,6 +1,5 @@
 {
   "name": "CodeExplain",
-  "description": "An interactive AI-powered code understanding and analysis platform that helps developers deeply explore, explain, and visualize codebases.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "A code comprehension workbench with local NLP search and optional AI-assisted analysis.",
+  "requestFramePermissions": []
 }

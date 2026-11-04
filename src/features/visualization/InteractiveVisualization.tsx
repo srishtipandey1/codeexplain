@@ -4,7 +4,7 @@ import {
   Network, Code, ArrowRight, Layers, Maximize2, 
   ChevronRight, ChevronDown, Check, Info, ZoomIn, Search
 } from 'lucide-react';
-import { ASTNode, CodeGraph } from '../types/analysis';
+import { ASTNode, CodeGraph } from '../../types/analysis';
 
 interface InteractiveVisualizationProps {
   ast: ASTNode;

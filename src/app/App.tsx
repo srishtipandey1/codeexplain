@@ -2,28 +2,29 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Sparkles, Terminal, Code, Cpu, ShieldAlert, Award, FileText,
+  Sparkles, Code, Cpu, ShieldAlert, Award, FileText,
   RotateCcw, Copy, Check, ChevronRight, MessageSquare, Flame, 
   HelpCircle, Sliders, Play, Maximize2, Minimize2, RefreshCw,
-  Search, ListCollapse, Command, Sun, Moon, Info, Zap, HelpCircle as QuizIcon,
+  Search, Command, Sun, Moon, Info, Zap, HelpCircle as QuizIcon,
   XCircle, X
 } from 'lucide-react';
 
-import CommandPalette from './components/CommandPalette';
-import FileExplorer, { FileItem, SAMPLE_CODE_TEMPLATES } from './components/FileExplorer';
-import InteractiveVisualization from './components/InteractiveVisualization';
-import QuizPanel from './components/QuizPanel';
-import ExportUtility from './components/ExportUtility';
-import ProjectSearch from './components/ProjectSearch';
-import SearchEvaluationPanel from './components/SearchEvaluationPanel';
-import { AnalysisReport, QuizQuestion, ChatMessage } from './types/analysis';
+import CommandPalette from '../components/CommandPalette';
+import FileExplorer, { FileItem, SAMPLE_CODE_TEMPLATES } from '../components/FileExplorer';
+import InteractiveVisualization from '../features/visualization/InteractiveVisualization';
+import QuizPanel from '../features/learning/QuizPanel';
+import ExportUtility from '../components/ExportUtility';
+import ProjectSearch from '../features/search/ProjectSearch';
+import SearchEvaluationPanel from '../features/search/SearchEvaluationPanel';
+import { AnalysisReport, QuizQuestion, ChatMessage } from '../types/analysis';
+import WelcomePage from './WelcomePage';
 
 export default function App() {
+  const [hasEnteredWorkspace, setHasEnteredWorkspace] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isCmdOpen, setIsCmdOpen] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(240); // px
   const [rightPanelWidth, setRightPanelWidth] = useState(480); // px
-  const [isChatExpanded, setIsChatExpanded] = useState(false);
 
   // File structure state
   const [files, setFiles] = useState<FileItem[]>([
@@ -41,7 +42,7 @@ export default function App() {
   // Analysis Result cache
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
-  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'search' | 'evaluation' | 'overview' | 'explanation' | 'quality' | 'optimize' | 'visuals' | 'quiz'>('overview');
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'search' | 'chat' | 'evaluation' | 'overview' | 'explanation' | 'quality' | 'optimize' | 'visuals' | 'quiz'>('search');
   const [pendingSearchJump, setPendingSearchJump] = useState<{ path: string; line: number } | null>(null);
 
   // Click-to-Explain inline state
@@ -96,6 +97,7 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [isChatSending, setIsChatSending] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   // Monaco editor reference
   const editorRef = useRef<any>(null);
@@ -173,7 +175,13 @@ export default function App() {
   // Scroll chat window to bottom
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+  }, [activeAnalysisTab, chatMessages]);
+
+  useEffect(() => {
+    if (activeAnalysisTab === 'chat') {
+      chatInputRef.current?.focus();
+    }
+  }, [activeAnalysisTab]);
 
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
@@ -311,7 +319,7 @@ export default function App() {
 
   const explainFunctionOnly = async (funcName: string, start: number, end: number, funcCode: string) => {
     setIsExplainingFunc(true);
-    setIsChatExpanded(true);
+    setActiveAnalysisTab('chat');
 
     const loadingId = `explain_loading_${Date.now()}`;
     setChatMessages(prev => [
@@ -344,7 +352,10 @@ Keep it elegant, technical, and directly focused on the function.`
         })
       });
 
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `AI service request failed (${response.status}).`);
+      }
       const data = await response.json();
 
       setChatMessages(prev => prev.map(msg => msg.id === loadingId ? {
@@ -354,7 +365,7 @@ Keep it elegant, technical, and directly focused on the function.`
     } catch (err) {
       setChatMessages(prev => prev.map(msg => msg.id === loadingId ? {
         ...msg,
-        content: `### ❌ Error\nFailed to generate focused explanation for function \`${funcName}\`. Please try again.`
+        content: `Failed to explain \`${funcName}\`: ${err instanceof Error ? err.message : 'AI service request failed.'}`
       } : msg));
     } finally {
       setIsExplainingFunc(false);
@@ -444,7 +455,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
 
   // Chat message submit
   const sendChatMessage = async (presetPrompt?: string) => {
-    const textToSend = presetPrompt || chatInput;
+    const textToSend = presetPrompt ?? chatInput;
     if (!textToSend.trim() || isChatSending) return;
 
     const userMsg: ChatMessage = {
@@ -591,6 +602,10 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
     }
   };
 
+  if (!hasEnteredWorkspace) {
+    return <WelcomePage onStart={() => setHasEnteredWorkspace(true)} />;
+  }
+
   return (
     <div className={`flex h-screen w-screen flex-col overflow-hidden font-sans ${isDarkMode ? 'dark bg-[#09090b] text-zinc-100' : 'bg-zinc-50 text-zinc-800'}`}>
       
@@ -602,7 +617,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
           </div>
           <div className="flex flex-col">
             <span className="font-sans text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">CodeExplain</span>
-            <span className="text-[11px] text-zinc-500 font-mono font-bold leading-none">/ workspace / core-engine</span>
+            <span className="text-[11px] text-zinc-500 font-mono font-bold leading-none">CODE WORKSPACE</span>
           </div>
         </div>
 
@@ -614,7 +629,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
             className="flex items-center gap-2.5 rounded-lg border border-zinc-300 bg-zinc-50/50 px-3.5 py-2 text-sm font-bold text-zinc-700 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-200 transition-all cursor-pointer shadow-sm"
           >
             <Command className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-            <span className="hidden sm:inline">Command Menu</span>
+            <span className="hidden sm:inline">Quick actions</span>
             <kbd className="hidden sm:inline-flex items-center rounded-md border border-zinc-300 bg-zinc-100 px-2 py-0.5 font-mono text-[10px] dark:border-zinc-800 dark:bg-zinc-850 text-zinc-500 font-bold">Ctrl+K</kbd>
           </button>
 
@@ -625,7 +640,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
             className="flex items-center gap-2 rounded-lg bg-zinc-950 px-5 py-2 text-sm font-extrabold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all shadow-md cursor-pointer active:scale-[0.98]"
           >
             {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Analyze Code
+            Analyze file
           </button>
 
           {/* Light/Dark Toggle */}
@@ -682,7 +697,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
           {/* Interactive Symbol Navigator Bar */}
           {analysisReport && analysisReport.symbols && (
             <div className="flex items-center gap-3 px-4 h-10 border-b border-zinc-200/60 bg-zinc-100/50 dark:bg-zinc-950/10 select-none overflow-x-auto shrink-0">
-              <span className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest shrink-0">Registry:</span>
+              <span className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest shrink-0">Symbols:</span>
               <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none">
                 {analysisReport.symbols
                   .filter(sym => ['function', 'class', 'variable'].includes(sym.type))
@@ -788,169 +803,35 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
             </AnimatePresence>
           </div>
 
-          {/* Bottom Panel: AI Chat with Session memory */}
-          <div className={`border-t border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/40 flex flex-col transition-all duration-200 ${
-            isChatExpanded ? 'h-[550px]' : 'h-[340px]'
-          }`}>
-            {/* Chat Controls bar */}
-            <div className="flex h-12 items-center justify-between border-b border-zinc-200 px-5 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-950/20 select-none">
-              <span className="flex items-center gap-2.5 text-base font-extrabold text-zinc-700 dark:text-zinc-200">
-                <MessageSquare className="h-5 w-5 text-violet-500" /> Conversational Memory Chat
-              </span>
-              <button
-                onClick={() => setIsChatExpanded(!isChatExpanded)}
-                className="rounded-md p-2 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
-              >
-                <ListCollapse className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Chat conversation list */}
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-              {chatMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full py-10 text-center">
-                  <Terminal className="h-10 w-10 text-zinc-400 dark:text-zinc-500 mb-4" />
-                  <span className="text-sm font-bold text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
-                    Pasted or uploaded code? Click "Analyze Code" above, or ask follow-up questions to trace control limits.
-                  </span>
-                </div>
-              ) : (
-                chatMessages.map(msg => (
-                  <div key={msg.id} className={`flex flex-col max-w-[85%] rounded-2xl px-5 py-3.5 text-sm md:text-[15px] shadow-sm border ${
-                    msg.role === 'user'
-                      ? 'bg-violet-600 border-violet-700 text-white self-end'
-                      : 'bg-white border-zinc-200/80 text-zinc-850 self-start dark:bg-zinc-900/60 dark:border-zinc-800 dark:text-zinc-100'
-                  }`}>
-                    <span className={`text-xs font-extrabold font-mono uppercase tracking-widest mb-2 ${
-                      msg.role === 'user' ? 'text-violet-100' : 'text-violet-600 dark:text-violet-400'
-                    }`}>
-                      {msg.role === 'user' ? 'You' : 'CodeExplain AI'}
-                    </span>
-                    <div className={`prose prose-sm md:prose-base font-sans leading-relaxed whitespace-pre-wrap break-words ${
-                      msg.role === 'user' ? 'text-white prose-invert font-medium' : 'text-zinc-800 dark:text-zinc-100 dark:prose-invert font-medium'
-                    }`}>
-                      {msg.content}
-                    </div>
-                  </div>
-                ))
-              )}
-              {isChatSending && (
-                <div className="bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-3.5 text-sm md:text-[15px] font-bold text-zinc-400 self-start animate-pulse">
-                  AI is thinking...
-                </div>
-              )}
-              <div ref={chatBottomRef} />
-            </div>
-
-            {/* Contextual Active Code Selection Bar */}
-            {selectedContext && (
-              <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/90 dark:bg-zinc-900/50 flex items-center justify-between text-sm font-extrabold text-zinc-700 dark:text-zinc-200 gap-4 shrink-0 shadow-sm">
-                <div className="flex items-center gap-2.5 truncate">
-                  <div className="h-3 w-3 rounded-full bg-violet-500 animate-pulse animate-duration-1000" />
-                  <span className="truncate text-sm font-bold">
-                    Focus: <strong className="text-zinc-900 dark:text-white font-mono text-xs">{selectedContext.name}()</strong> <span className="text-zinc-500 dark:text-zinc-400 font-normal">({selectedContext.type}, lines {selectedContext.lineStart}-{selectedContext.lineEnd})</span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <button
-                    onClick={() => handleToggleDependencies(selectedContext.name)}
-                    className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer shadow-sm ${
-                      highlightedSymbol === selectedContext.name
-                        ? 'bg-violet-600 text-white dark:bg-violet-500'
-                        : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
-                    }`}
-                    title="Highlight all references in the editor"
-                  >
-                    {highlightedSymbol === selectedContext.name ? 'Highlighting...' : 'Show Dependencies'}
-                  </button>
-                  <button
-                    onClick={() => explainFunctionOnly(selectedContext.name, selectedContext.lineStart, selectedContext.lineEnd, selectedContext.code)}
-                    disabled={isExplainingFunc}
-                    className="px-3.5 py-2 rounded-lg bg-zinc-200 text-zinc-700 hover:bg-zinc-300 text-sm font-bold dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
-                  >
-                    Explain Function
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedContext(null);
-                      if (highlightedSymbol) {
-                        handleToggleDependencies(highlightedSymbol); // clear highlights
-                      }
-                    }}
-                    className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
-                    title="Clear selected context"
-                  >
-                    <XCircle className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Prompt pills helper */}
-            <div className="px-5 py-2.5 flex gap-2.5 overflow-x-auto border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/20 shrink-0">
-              {[
-                { label: 'Why is this O(n)?', query: 'Explain the formal time and space complexity and tell me why it is bounded by O(n).' },
-                { label: 'Can this be optimized?', query: 'Can you write a more optimized version of this code to reduce execution overhead?' },
-                { label: 'Rewrite recursively', query: 'Show me how to rewrite this code using recursive calls instead of iterative loops.' },
-                { label: 'Generate tests', query: 'Generate a concise, runnable test suite for this code. Return only the complete test code; omit headings, a test plan, coverage summaries, and tables.' }
-              ].map((pill, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => sendChatMessage(pill.query)}
-                  className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-850 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:text-white shrink-0 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
-                >
-                  {pill.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Chat Input panel */}
-            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/30 flex gap-3 shrink-0">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                placeholder="Ask follow-up questions (e.g. Explain like I am 10, write tests...)"
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 transition-all shadow-inner font-medium"
-                onKeyDown={e => {
-                  if (e.key === 'Enter') sendChatMessage();
-                }}
-              />
-              <button
-                onClick={() => sendChatMessage()}
-                disabled={isChatSending}
-                className="rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 px-6 text-base font-extrabold transition-all shrink-0 cursor-pointer shadow-md active:scale-[0.98]"
-              >
-                Send
-              </button>
-            </div>
-          </div>
         </main>
 
         {/* Right Column: AI Analysis Reports, Visualizers & Quizzes */}
         <aside className="w-full md:flex flex-col overflow-hidden" style={{ width: `${rightPanelWidth}px` }}>
           
-          {/* Analysis Menu Tabs */}
-          <div role="tablist" className="flex shrink-0 overflow-x-auto border-b border-zinc-200 bg-white px-2 dark:border-zinc-800 dark:bg-zinc-950/70 select-none">
-            {(['search', 'evaluation', 'overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
+          <div className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/70">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-400">CodeExplain tools</p>
+            <h2 className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Search, chat &amp; analysis</h2>
+          </div>
+          <div role="tablist" aria-label="Project tools" className="grid shrink-0 grid-cols-5 gap-1 border-b border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950/70 select-none">
+            {(['search', 'chat', 'evaluation', 'overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveAnalysisTab(tab)}
                 aria-selected={activeAnalysisTab === tab}
                 role="tab"
-                className={`shrink-0 px-3 py-3.5 text-center text-xs font-semibold capitalize border-b-2 transition-colors cursor-pointer ${
+                className={`w-full rounded-lg border px-1.5 py-2 text-center text-[11px] font-semibold capitalize transition-colors cursor-pointer ${
                   activeAnalysisTab === tab
-                    ? 'border-violet-600 text-violet-700 dark:border-violet-400 dark:text-violet-300'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                    ? 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950/50 dark:text-violet-300'
+                    : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
-                {tab === 'search' ? 'Search' : tab === 'evaluation' ? 'Eval' : tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
+                {tab === 'search' ? 'Search' : tab === 'chat' ? 'Chat' : tab === 'evaluation' ? 'Eval' : tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
               </button>
             ))}
           </div>
 
-          <div className="analysis-panel flex-1 overflow-y-auto bg-zinc-50/70 dark:bg-zinc-950/30">
-            {isAnalyzing && activeAnalysisTab !== 'search' && activeAnalysisTab !== 'evaluation' ? (
+          <div className={`analysis-panel min-h-0 flex-1 bg-zinc-50/70 dark:bg-zinc-950/30 ${activeAnalysisTab === 'chat' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+            {isAnalyzing && activeAnalysisTab !== 'search' && activeAnalysisTab !== 'chat' && activeAnalysisTab !== 'evaluation' ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -963,7 +844,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   Running Analysis Pipeline
                 </span>
                 <span className="text-xs text-neutral-400 dark:text-neutral-500 mt-2 max-w-sm px-4 leading-relaxed">
-                  Parsing AST structures, compiling logical execution graphs, and running diagnostics...
+                  Reading code structure and preparing a focused explanation...
                 </span>
                 
                 {/* Visual loading bars */}
@@ -976,14 +857,14 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   />
                 </div>
               </div>
-            ) : !analysisReport && activeAnalysisTab !== 'search' && activeAnalysisTab !== 'evaluation' ? (
+            ) : !analysisReport && activeAnalysisTab !== 'search' && activeAnalysisTab !== 'chat' && activeAnalysisTab !== 'evaluation' ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <Sparkles className="h-12 w-12 text-zinc-400 dark:text-zinc-600 mb-4" />
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                   Ready for Input
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 max-w-xs leading-relaxed font-medium">
-                  Select a preset template or upload your project. Then, click <strong className="text-zinc-900 dark:text-zinc-100">"Analyze Code"</strong> above to bootstrap the diagnostic ecosystem!
+                  Choose a preset or upload a project, then analyze the selected file to explore its structure and behavior.
                 </p>
               </div>
             ) : (
@@ -994,7 +875,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.12 }}
-                  className={activeAnalysisTab === 'quiz' || activeAnalysisTab === 'visuals'
+                  className={activeAnalysisTab === 'quiz' || activeAnalysisTab === 'visuals' || activeAnalysisTab === 'chat'
                     ? 'h-full'
                     : 'analysis-content p-5 flex flex-col gap-6'}
                 >
@@ -1007,6 +888,121 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                         setSelectedPath(path);
                       }}
                     />
+                  )}
+                  {activeAnalysisTab === 'chat' && (
+                    <section className="flex h-full min-h-0 flex-col">
+                      <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/70">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-violet-500" />
+                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ask about your code</h3>
+                        </div>
+                        <p className="mt-1 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                          Conversation context: {activeFile?.name || 'current workspace'} · {editorLanguage}
+                        </p>
+                      </header>
+
+                      <div
+                        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4"
+                        aria-live="polite"
+                        aria-label="Chat conversation"
+                      >
+                        {chatMessages.length === 0 ? (
+                          <div className="m-auto flex w-full max-w-sm flex-col items-center text-center">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300">
+                              <MessageSquare className="h-5 w-5" />
+                            </span>
+                            <h4 className="mt-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                              Start with {activeFile?.name || 'your code'}
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                              Ask one question about the selected file. Search results stay in the Search tab.
+                            </p>
+                            <div className="mt-4 flex flex-wrap justify-center gap-2">
+                              {[
+                                'Explain what this file does',
+                                'What edge cases should I check?',
+                                'Walk me through the main function',
+                              ].map(prompt => (
+                                <button
+                                  key={prompt}
+                                  type="button"
+                                  onClick={() => sendChatMessage(prompt)}
+                                  disabled={isChatSending}
+                                  className="rounded-full border border-zinc-200 bg-white px-3 py-2 text-left text-xs text-zinc-600 transition hover:border-violet-300 hover:text-violet-700 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-violet-700 dark:hover:text-violet-300"
+                                >
+                                  {prompt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          chatMessages.map(msg => (
+                            <article
+                              key={msg.id}
+                              className={`max-w-[95%] rounded-xl border px-3.5 py-3 text-sm leading-6 ${
+                                msg.role === 'user'
+                                  ? 'self-end border-violet-600 bg-violet-600 text-white'
+                                  : 'self-start border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100'
+                              }`}
+                            >
+                              <p className={`mb-1 text-[10px] font-semibold uppercase tracking-wide ${
+                                msg.role === 'user' ? 'text-violet-100' : 'text-violet-600 dark:text-violet-300'
+                              }`}>
+                                {msg.role === 'user' ? 'You' : 'CodeExplain'}
+                              </p>
+                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                            </article>
+                          ))
+                        )}
+                        {isChatSending && (
+                          <div className="self-start rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                            CodeExplain is responding…
+                          </div>
+                        )}
+                        <div ref={chatBottomRef} />
+                      </div>
+
+                      {selectedContext && (
+                        <div className="flex shrink-0 items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-950/70">
+                          <span className="min-w-0 flex-1 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                            Focus: <span className="font-mono text-zinc-800 dark:text-zinc-200">{selectedContext.name}</span>
+                            {' '}· lines {selectedContext.lineStart}–{selectedContext.lineEnd}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDependencies(selectedContext.name)}
+                            className="shrink-0 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-violet-300 dark:border-zinc-700 dark:text-zinc-300"
+                          >
+                            {highlightedSymbol === selectedContext.name ? 'Clear highlights' : 'Show references'}
+                          </button>
+                        </div>
+                      )}
+
+                      <form
+                        className="flex shrink-0 gap-2 border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950/70"
+                        onSubmit={event => {
+                          event.preventDefault();
+                          void sendChatMessage();
+                        }}
+                      >
+                        <input
+                          ref={chatInputRef}
+                          type="text"
+                          value={chatInput}
+                          onChange={event => setChatInput(event.target.value)}
+                          placeholder="Ask a question about this file…"
+                          aria-label="Message CodeExplain about this file"
+                          className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isChatSending || !chatInput.trim()}
+                          className="shrink-0 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Send
+                        </button>
+                      </form>
+                    </section>
                   )}
                   
                   {/* OVERVIEW TAB */}

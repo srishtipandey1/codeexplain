@@ -2,7 +2,9 @@
 
 # CodeExplain
 
-![CodeExplain workspace showing a Python file in the editor](docs/codeexplain-workspace.png)
+![CodeExplain dashboard workspace showing a Python file in the editor](docs/codeexplain-workspace.png)
+
+The app opens on a landing page. Select **Start exploring** to enter the workspace shown here.
 
 **Explore code. Understand its structure. Search by intent.**
 
@@ -16,13 +18,15 @@ An interactive code workbench with local NLP-powered project search and optional
 
 ## Overview
 
-CodeExplain helps you investigate unfamiliar code in an interactive workspace. Browse files, inspect extracted symbols and approximate metrics, ask questions about code, and explore explanations, quality observations, optimization ideas, visualizations, and quizzes.
+CodeExplain opens with a focused landing page; select **Start exploring** to enter the interactive workspace. Browse files, inspect extracted symbols and approximate metrics, ask questions about the selected code in the inspector's **Chat** tab, and explore explanations, quality observations, optimization ideas, visualizations, and quizzes. The **Search** tab is a separate local code-and-document search tool.
 
 The project also includes a distinct local search and evaluation workflow. Search code and documentation with natural-language queries, inspect query normalization, and evaluate a BM25 retrieval baseline. **Search, query suggestions, and evaluation run locally and do not require an API key or send project files to an AI provider.**
 
 ## Features
 
 - **Code workspace:** browse and edit files in a Monaco-based editor.
+- **Focused entry point:** start from a product landing page and open the workspace when you are ready to explore.
+- **One contextual chat:** ask questions about the selected code in the inspector's **Chat** tab. The **Search** tab finds matching files locally and is not another chatbot.
 - **Code understanding:** inspect approximate metrics, symbols, and relationships.
 - **Natural-language search:** retrieve relevant code and documentation with local BM25 ranking.
 - **Query suggestions:** expand search terms with a deterministic, local programming-concept vocabulary.
@@ -223,19 +227,22 @@ codeexplain/
 ├── server.ts
 ├── vite.config.ts
 ├── src/
-│   ├── App.tsx
-│   ├── components/
-│   │   ├── ProjectSearch.tsx
-│   │   ├── SearchEvaluationPanel.tsx
-│   │   └── ...
-│   ├── services/
-│   │   ├── projectSearch.ts
-│   │   ├── projectSearch.test.ts
-│   │   ├── searchEvaluation.ts
-│   │   ├── searchEvaluation.test.ts
-│   │   ├── groq.ts
-│   │   └── parser.ts
-│   └── types/
+│   ├── app/
+│   │   ├── App.tsx
+│   │   └── WelcomePage.tsx
+│   ├── components/               # File explorer, command palette, exports
+│   ├── features/
+│   │   ├── search/
+│   │   │   ├── ProjectSearch.tsx
+│   │   │   ├── SearchEvaluationPanel.tsx
+│   │   │   ├── searchEngine.ts  # BM25 index and local query suggestions
+│   │   │   └── searchEvaluation.ts
+│   │   ├── learning/            # QuizPanel
+│   │   └── visualization/       # InteractiveVisualization
+│   ├── services/                 # API integration and local parsing
+│   ├── types/                    # Shared TypeScript types
+│   ├── main.tsx                  # React application entry point
+│   └── index.css
 ├── .env.example
 └── package.json
 ```

@@ -1,5 +1,5 @@
-import type { FileItem } from '../components/FileExplorer';
-import { buildProjectSearchIndex, searchProjectIndex } from './projectSearch';
+import type { FileItem } from '../../components/FileExplorer';
+import { buildProjectSearchIndex, searchProjectIndex } from './searchEngine';
 
 const BENCHMARK_FILES: FileItem[] = [
   {

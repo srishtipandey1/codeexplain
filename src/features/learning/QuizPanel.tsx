@@ -4,7 +4,7 @@ import {
   Award, HelpCircle, CheckCircle2, XCircle, ChevronRight, 
   RefreshCw, Play, ShieldAlert, Sparkles, AlertCircle
 } from 'lucide-react';
-import { QuizQuestion } from '../types/analysis';
+import { QuizQuestion } from '../../types/analysis';
 
 interface QuizPanelProps {
   questions: QuizQuestion[];

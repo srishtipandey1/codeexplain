@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { runSearchEvaluation } from '../services/searchEvaluation';
+import { runSearchEvaluation } from './searchEvaluation';
 
 const METRICS = [
   { key: 'precisionAtK', label: 'Precision@3', description: 'Relevant results in the top three' },

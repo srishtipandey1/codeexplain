@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, Search, Sparkles } from 'lucide-react';
-import type { FileItem } from './FileExplorer';
-import { buildProjectSearchIndex, expandSearchQueryLocally, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex, type ProjectSearchKind } from '../services/projectSearch';
+import type { FileItem } from '../../components/FileExplorer';
+import { buildProjectSearchIndex, expandSearchQueryLocally, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex, type ProjectSearchKind } from './searchEngine';
 
 interface ProjectSearchProps {
   files: FileItem[];
@@ -54,12 +54,12 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Workspace search</p>
+        <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Local project search</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Find code and docs by intent
+          Search code and documentation
         </h2>
         <p className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-          Ask about behavior in your code or find setup, usage, and deployment guidance in project docs.
+          Find matching code or project docs by concept. Results are ranked locally; use Chat for questions and explanations.
         </p>
       </header>
 
@@ -69,8 +69,8 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
           type="search"
           value={query}
           onChange={event => setQuery(event.target.value)}
-          placeholder="e.g. where is input checked? or how do I deploy?"
-          aria-label="Search code and documentation by natural language"
+          placeholder="Search concepts, functions, errors, or setup…"
+          aria-label="Search code and documentation"
           className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-3 text-sm text-zinc-800 outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-violet-500"
         />
       </label>

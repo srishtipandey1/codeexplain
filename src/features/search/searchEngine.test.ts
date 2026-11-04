@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { FileItem } from '../components/FileExplorer';
-import { buildProjectSearchIndex, expandSearchQueryLocally, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from './projectSearch';
+import type { FileItem } from '../../components/FileExplorer';
+import { buildProjectSearchIndex, expandSearchQueryLocally, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from './searchEngine';
 
 const files: FileItem[] = [
   {
