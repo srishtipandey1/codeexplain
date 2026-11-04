@@ -13,7 +13,7 @@ async function callGroqAPI(systemPrompt: string, userPrompt: string, jsonFormat:
   const url = 'https://api.groq.com/openai/v1/chat/completions';
 
   const body: any = {
-    model: 'llama-3.3-70b-versatile',
+    model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }

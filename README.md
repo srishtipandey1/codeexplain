@@ -135,6 +135,7 @@ Create a `.env` file in the project root and add your Groq key:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-120b
 ```
 
 The repository includes an `.env.example` template. On Windows PowerShell, you can copy it with:
@@ -152,9 +153,10 @@ The server reads the following environment variables:
 | Variable | Required | Purpose |
 |---|---:|---|
 | `GROQ_API_KEY` | Yes, for AI features | Authenticates requests to the Groq API. |
+| `GROQ_MODEL` | No | Groq model ID. Defaults to `openai/gpt-oss-120b`. |
 | `APP_URL` | No | Present in the example template, but not currently read by the server. The server listens on port `3000`. |
 
-The current integration calls Groq's OpenAI-compatible chat-completions endpoint with the `llama-3.3-70b-versatile` model. Changing providers or model names requires updating the server-side integration.
+The integration calls Groq's OpenAI-compatible chat-completions endpoint. The default model is `openai/gpt-oss-120b`; set `GROQ_MODEL` to another model available to your Groq account to override it.
 
 ## Run in development
 

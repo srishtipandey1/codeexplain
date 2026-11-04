@@ -455,7 +455,10 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
         })
       });
 
-      if (!response.ok) throw new Error('Failed to generate response.');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `AI service request failed (${response.status}).`);
+      }
 
       const data = await response.json();
       setChatMessages(prev => [...prev, {
@@ -469,7 +472,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
       setChatMessages(prev => [...prev, {
         id: `ai_err_${Date.now()}`,
         role: 'assistant',
-        content: 'Error: Failed to fetch explanation from AI service.',
+        content: `Error: ${err instanceof Error ? err.message : 'Failed to fetch explanation from AI service.'}`,
         timestamp: new Date().toLocaleTimeString()
       }]);
     } finally {
