@@ -1,5 +1,12 @@
 import type { FileItem } from '../components/FileExplorer';
 
+export interface ProjectConcept {
+  label: string;
+  query: string;
+  fileCount: number;
+  chunkCount: number;
+}
+
 export interface ProjectSearchResult {
   filePath: string;
   symbol: string;
@@ -12,6 +19,7 @@ export interface ProjectSearchResult {
 
 interface SearchDocument extends ProjectSearchResult {
   tokens: string[];
+  concepts: string[];
 }
 
 export interface ProjectSearchIndex {
@@ -27,13 +35,13 @@ const STOP_WORDS = new Set([
 ]);
 
 const CONCEPT_GROUPS = [
-  ['validate', 'validation', 'valid', 'sanitize', 'sanitization', 'input', 'guard'],
-  ['error', 'exception', 'failure', 'catch', 'throw', 'raise'],
-  ['auth', 'authentication', 'authorization', 'permission', 'token', 'login'],
-  ['cache', 'caching', 'memoize', 'memoization', 'ttl'],
-  ['sort', 'sorting', 'order', 'ordering', 'merge', 'quick'],
-  ['test', 'testing', 'assert', 'assertion', 'mock', 'fixture'],
-  ['parse', 'parsing', 'parser', 'decode', 'deserialize'],
+  { label: 'Input validation', query: 'validate input', terms: ['validate', 'validation', 'valid', 'sanitize', 'sanitization', 'input', 'guard'] },
+  { label: 'Error handling', query: 'error handling', terms: ['error', 'exception', 'failure', 'catch', 'throw', 'raise'] },
+  { label: 'Authentication', query: 'authentication', terms: ['auth', 'authentication', 'authorization', 'permission', 'token', 'login'] },
+  { label: 'Caching', query: 'caching', terms: ['cache', 'caching', 'memoize', 'memoization', 'ttl'] },
+  { label: 'Sorting', query: 'sorting', terms: ['sort', 'sorting', 'order', 'ordering', 'merge', 'quick'] },
+  { label: 'Testing', query: 'testing', terms: ['test', 'testing', 'assert', 'assertion', 'mock', 'fixture'] },
+  { label: 'Parsing', query: 'parsing', terms: ['parse', 'parsing', 'parser', 'decode', 'deserialize'] },
 ];
 
 const DECLARATION_PATTERN =
@@ -56,7 +64,7 @@ function tokenize(value: string): string[] {
 function expandQueryTerms(query: string): Set<string> {
   const terms = new Set(tokenize(query));
   for (const group of CONCEPT_GROUPS) {
-    const normalizedGroup = group.flatMap(tokenize);
+    const normalizedGroup = group.terms.flatMap(tokenize);
     const matchesGroup = [...terms].some(term =>
       normalizedGroup.some(alias => term === alias || (term.length >= 4 && alias.startsWith(term.slice(0, 4))))
     );
@@ -97,6 +105,10 @@ function createFileChunks(file: FileItem): SearchDocument[] {
 
   return ranges.map(({ start, end, symbol }) => {
     const content = lines.slice(start, end).join('\n');
+    const contentTerms = new Set(tokenize(content));
+    const concepts = CONCEPT_GROUPS
+      .filter(group => group.terms.flatMap(tokenize).some(term => contentTerms.has(term)))
+      .map(group => group.label);
     const searchableText = `${file.path} ${symbol} ${content}`;
     return {
       filePath: file.path,
@@ -107,6 +119,7 @@ function createFileChunks(file: FileItem): SearchDocument[] {
       score: 0,
       matchedTerms: [],
       tokens: tokenize(searchableText),
+      concepts,
     };
   });
 }
@@ -125,6 +138,20 @@ export function buildProjectSearchIndex(files: FileItem[]): ProjectSearchIndex {
     }
   }
   return { documents, averageLength, documentFrequencies };
+}
+
+export function extractProjectConcepts(index: ProjectSearchIndex): ProjectConcept[] {
+  return CONCEPT_GROUPS.map(({ label, query }) => {
+    const matchingDocuments = index.documents.filter(document => document.concepts.includes(label));
+    return {
+      label,
+      query,
+      fileCount: new Set(matchingDocuments.map(document => document.filePath)).size,
+      chunkCount: matchingDocuments.length,
+    };
+  })
+    .filter(concept => concept.chunkCount > 0)
+    .sort((left, right) => right.chunkCount - left.chunkCount || left.label.localeCompare(right.label));
 }
 
 const QUERY_FILLER_WORDS = new Set([
@@ -167,5 +194,5 @@ export function searchProjectIndex(index: ProjectSearchIndex, query: string, lim
     .filter(document => document.score > 0)
     .sort((left, right) => right.score - left.score || left.filePath.localeCompare(right.filePath))
     .slice(0, limit)
-    .map(({ tokens: _tokens, ...result }) => result);
+    .map(({ tokens: _tokens, concepts: _concepts, ...result }) => result);
 }

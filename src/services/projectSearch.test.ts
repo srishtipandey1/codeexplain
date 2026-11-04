@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FileItem } from '../components/FileExplorer';
-import { buildProjectSearchIndex, rewriteSearchQuery, searchProjectIndex } from './projectSearch';
+import { buildProjectSearchIndex, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from './projectSearch';
 
 const files: FileItem[] = [
   {
@@ -59,6 +59,20 @@ test('searches with the rewritten query terms', () => {
   );
 
   assert.equal(results[0]?.symbol, 'merge_sort');
+});
+
+test('extracts code concepts with file and chunk counts', () => {
+  const concepts = extractProjectConcepts(buildProjectSearchIndex(files));
+
+  assert.deepEqual(
+    concepts.map(({ label, fileCount }) => ({ label, fileCount })),
+    [
+      { label: 'Error handling', fileCount: 1 },
+      { label: 'Input validation', fileCount: 1 },
+      { label: 'Sorting', fileCount: 1 },
+    ],
+  );
+  assert.ok(concepts.every(concept => concept.chunkCount > 0));
 });
 
 test('returns no results for empty or unrelated queries', () => {

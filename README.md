@@ -64,7 +64,7 @@ Use the contextual chat to ask questions about a snippet, a function, its variab
 
 ### Search your project in natural language
 
-Search the currently loaded project with questions such as “where is user input validated?” Queries are rewritten locally to remove question framing and generic code-search filler, then ranked with BM25 and code-aware identifier tokenization. Search runs in the browser against the files you have loaded; it does not send source code to the AI provider. This is lexical information retrieval rather than embedding-based vector search.
+Search the currently loaded project with questions such as “where is user input validated?” Queries are rewritten locally to remove question framing and generic code-search filler, then ranked with BM25 and code-aware identifier tokenization. Search runs in the browser against the files you have loaded; it does not send source code to the AI provider. This is lexical information retrieval rather than embedding-based vector search. The Search panel also surfaces heuristic code concepts—such as input validation, error handling, and sorting—with file counts; selecting a concept starts a focused search.
 
 ### Learn and improve
 
@@ -84,7 +84,7 @@ CodeExplain uses a two-part analysis workflow:
 2. **Language-model pass:** the server sends the code and relevant local context to Groq's chat-completions API. The configured Llama model generates explanations and other requested outputs.
 3. **Interactive exploration:** the application presents the returned analysis in its editor and workspace, where you can ask follow-up questions or request another analysis.
 
-Natural-language project search is a separate, browser-local workflow. It splits loaded source files into declaration-oriented chunks and uses BM25 with code-aware tokenization and lightweight concept expansion to rank matches. Search does not require an AI API key.
+Natural-language project search is a separate, browser-local workflow. It splits loaded source files into declaration-oriented chunks and uses BM25 with code-aware tokenization and lightweight concept expansion to rank matches. It also labels chunks with heuristic concepts based on source-code tokens and aggregates those into clickable, file-counted concepts in the Search panel. Search does not require an AI API key.
 
 ```mermaid
 flowchart LR

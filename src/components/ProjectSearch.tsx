@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, Search } from 'lucide-react';
 import type { FileItem } from './FileExplorer';
-import { buildProjectSearchIndex, rewriteSearchQuery, searchProjectIndex } from '../services/projectSearch';
+import { buildProjectSearchIndex, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from '../services/projectSearch';
 
 interface ProjectSearchProps {
   files: FileItem[];
@@ -17,6 +17,7 @@ const EXAMPLE_QUERIES = [
 export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProps) {
   const [query, setQuery] = useState('');
   const searchIndex = useMemo(() => buildProjectSearchIndex(files), [files]);
+  const concepts = useMemo(() => extractProjectConcepts(searchIndex), [searchIndex]);
   const rewrittenQuery = useMemo(() => rewriteSearchQuery(query), [query]);
   const results = useMemo(() => searchProjectIndex(searchIndex, query), [searchIndex, query]);
   const fileCount = useMemo(() => {
@@ -57,6 +58,30 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
         <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">
           Search terms: <span className="font-mono text-zinc-700 dark:text-zinc-300">{rewrittenQuery}</span>
         </p>
+      )}
+
+      {concepts.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Concepts found in code</h3>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">Heuristic matches</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {concepts.map(concept => (
+              <button
+                key={concept.label}
+                onClick={() => setQuery(concept.query)}
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-300 dark:hover:border-violet-700 dark:hover:text-violet-300"
+                title={`Found in ${concept.fileCount} file${concept.fileCount === 1 ? '' : 's'} across ${concept.chunkCount} code sections`}
+              >
+                {concept.label}
+                <span className="text-zinc-400 dark:text-zinc-500">
+                  {concept.fileCount} {concept.fileCount === 1 ? 'file' : 'files'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {!query.trim() ? (
