@@ -62,6 +62,10 @@ CodeExplain is an exploratory assistant, not a compiler, static-analysis authori
 
 Use the contextual chat to ask questions about a snippet, a function, its variables, or its behavior. Chat requests include the selected code and conversation history so responses can stay grounded in the current context.
 
+### Search your project in natural language
+
+Search the currently loaded project with questions such as “where is user input validated?” Results are ranked locally with BM25, code-aware identifier tokenization, and a small set of related programming concepts. Search runs in the browser against the files you have loaded; it does not send source code to the AI provider. This is lexical information retrieval rather than embedding-based vector search.
+
 ### Learn and improve
 
 - Generate multiple-choice and code-reasoning quiz questions.
@@ -80,6 +84,8 @@ CodeExplain uses a two-part analysis workflow:
 2. **Language-model pass:** the server sends the code and relevant local context to Groq's chat-completions API. The configured Llama model generates explanations and other requested outputs.
 3. **Interactive exploration:** the application presents the returned analysis in its editor and workspace, where you can ask follow-up questions or request another analysis.
 
+Natural-language project search is a separate, browser-local workflow. It splits loaded source files into declaration-oriented chunks and uses BM25 with code-aware tokenization and lightweight concept expansion to rank matches. Search does not require an AI API key.
+
 ```mermaid
 flowchart LR
     A[Source code] --> B[Language detection]
@@ -90,7 +96,7 @@ flowchart LR
     F -->|Follow-up question| D
 ```
 
-The local parser is intentionally lightweight: its metrics and extracted structure are useful context, but they are not a full compiler-grade abstract syntax tree or a guarantee of semantic correctness. The AI component uses prompts to produce natural-language analysis; the application does not currently implement embeddings, vector search, or a separately trained NLP model.
+The local parser is intentionally lightweight: its metrics and extracted structure are useful context, but they are not a full compiler-grade abstract syntax tree or a guarantee of semantic correctness. The AI component uses prompts to produce natural-language analysis. Project search uses lexical BM25 ranking and concept expansion; it does not currently implement embeddings, vector search, or a separately trained NLP model.
 
 ## Supported languages
 

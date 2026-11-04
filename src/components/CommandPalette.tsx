@@ -16,6 +16,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectAction, isDark
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commands = [
+    { id: 'search', name: 'Search Project Code', desc: 'Find code by natural-language intent', icon: Search },
     { id: 'analyze', name: 'Analyze Code', desc: 'Run full deep parsing pipeline', icon: Sparkles },
     { id: 'optimize', name: 'Optimize Code', desc: 'Improve complexity & runtime efficiency', icon: Cpu },
     { id: 'refactor', name: 'Refactor (Clean Code)', desc: 'Improve readability & SOLID design patterns', icon: Code },

@@ -14,6 +14,7 @@ import FileExplorer, { FileItem, SAMPLE_CODE_TEMPLATES } from './components/File
 import InteractiveVisualization from './components/InteractiveVisualization';
 import QuizPanel from './components/QuizPanel';
 import ExportUtility from './components/ExportUtility';
+import ProjectSearch from './components/ProjectSearch';
 import { AnalysisReport, QuizQuestion, ChatMessage } from './types/analysis';
 
 export default function App() {
@@ -39,7 +40,8 @@ export default function App() {
   // Analysis Result cache
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
-  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'overview' | 'explanation' | 'quality' | 'optimize' | 'visuals' | 'quiz'>('overview');
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'search' | 'overview' | 'explanation' | 'quality' | 'optimize' | 'visuals' | 'quiz'>('overview');
+  const [pendingSearchJump, setPendingSearchJump] = useState<{ path: string; line: number } | null>(null);
 
   // Click-to-Explain inline state
   const [clickedLine, setClickedLine] = useState<{ line: number; explanation: string } | null>(null);
@@ -149,6 +151,23 @@ export default function App() {
       setHighlightedSymbol(null);
     }
   }, [selectedPath, files]);
+
+  useEffect(() => {
+    if (!pendingSearchJump || pendingSearchJump.path !== selectedPath || !editorRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
+      if (!editor || !model) return;
+
+      const line = Math.min(pendingSearchJump.line, model.getLineCount());
+      editor.revealLineInCenter(line);
+      editor.setPosition({ lineNumber: line, column: 1 });
+      setPendingSearchJump(null);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [pendingSearchJump, selectedPath, selectedFileContent]);
 
   // Scroll chat window to bottom
   useEffect(() => {
@@ -508,7 +527,9 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
 
   // Specific Action dispatchers
   const runPresetAction = async (action: string) => {
-    if (action === 'analyze') {
+    if (action === 'search') {
+      setActiveAnalysisTab('search');
+    } else if (action === 'analyze') {
       runAnalysisPipeline();
     } else if (action === 'optimize') {
       setIsAnalyzing(true);
@@ -910,7 +931,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
           
           {/* Analysis Menu Tabs */}
           <div role="tablist" className="flex shrink-0 overflow-x-auto border-b border-zinc-200 bg-white px-2 dark:border-zinc-800 dark:bg-zinc-950/70 select-none">
-            {(['overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
+            {(['search', 'overview', 'explanation', 'quality', 'optimize', 'visuals', 'quiz'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveAnalysisTab(tab)}
@@ -922,13 +943,13 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                     : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
                 }`}
               >
-                {tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
+                {tab === 'search' ? 'Search' : tab === 'explanation' ? 'Explain' : tab === 'optimize' ? 'Optimize' : tab}
               </button>
             ))}
           </div>
 
           <div className="analysis-panel flex-1 overflow-y-auto bg-zinc-50/70 dark:bg-zinc-950/30">
-            {isAnalyzing ? (
+            {isAnalyzing && activeAnalysisTab !== 'search' ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -954,7 +975,7 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                   />
                 </div>
               </div>
-            ) : !analysisReport ? (
+            ) : !analysisReport && activeAnalysisTab !== 'search' ? (
               <div className="flex flex-col items-center justify-center h-full py-28 text-center px-6">
                 <Sparkles className="h-12 w-12 text-zinc-400 dark:text-zinc-600 mb-4" />
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
@@ -976,6 +997,15 @@ Feel free to ask follow-up questions! Try clicking **"Can this be optimized?"** 
                     ? 'h-full'
                     : 'analysis-content p-5 flex flex-col gap-6'}
                 >
+                  {activeAnalysisTab === 'search' && (
+                    <ProjectSearch
+                      files={files}
+                      onOpenResult={(path, line) => {
+                        setPendingSearchJump({ path, line });
+                        setSelectedPath(path);
+                      }}
+                    />
+                  )}
                   
                   {/* OVERVIEW TAB */}
                   {activeAnalysisTab === 'overview' && (
