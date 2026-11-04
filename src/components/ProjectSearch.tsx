@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, Search } from 'lucide-react';
 import type { FileItem } from './FileExplorer';
-import { buildProjectSearchIndex, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex } from '../services/projectSearch';
+import { buildProjectSearchIndex, extractProjectConcepts, rewriteSearchQuery, searchProjectIndex, type ProjectSearchKind } from '../services/projectSearch';
 
 interface ProjectSearchProps {
   files: FileItem[];
@@ -12,33 +12,45 @@ const EXAMPLE_QUERIES = [
   'where is input validated',
   'how are errors handled',
   'find sorting logic',
+  'how do I configure deployment',
 ];
 
 export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProps) {
   const [query, setQuery] = useState('');
+  const [searchKind, setSearchKind] = useState<ProjectSearchKind | 'all'>('all');
   const searchIndex = useMemo(() => buildProjectSearchIndex(files), [files]);
   const concepts = useMemo(() => extractProjectConcepts(searchIndex), [searchIndex]);
   const rewrittenQuery = useMemo(() => rewriteSearchQuery(query), [query]);
-  const results = useMemo(() => searchProjectIndex(searchIndex, query), [searchIndex, query]);
-  const fileCount = useMemo(() => {
-    const countFiles = (items: FileItem[]): number => items.reduce(
-      (count, file) => count + (file.isDirectory
-        ? countFiles(file.children ?? [])
-        : Number(Boolean(file.content.trim()))),
-      0,
-    );
-    return countFiles(files);
+  const results = useMemo(
+    () => searchProjectIndex(searchIndex, query, 8, searchKind),
+    [searchIndex, query, searchKind],
+  );
+  const fileCounts = useMemo(() => {
+    const counts = { code: 0, documentation: 0 };
+    const countFiles = (items: FileItem[]) => {
+      for (const file of items) {
+        if (file.isDirectory) {
+          countFiles(file.children ?? []);
+        } else if (file.content.trim()) {
+          if (/\.(md|mdx|rst|txt)$/i.test(file.path)) counts.documentation++;
+          else counts.code++;
+        }
+      }
+    };
+    countFiles(files);
+    return counts;
   }, [files]);
+  const searchedFileCount = searchKind === 'all' ? fileCounts.code + fileCounts.documentation : fileCounts[searchKind];
 
   return (
     <div className="flex flex-col gap-5">
       <header>
         <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Workspace search</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Find code by intent
+          Find code and docs by intent
         </h2>
         <p className="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-          Describe behavior or a concept to find relevant functions across your files.
+          Ask about behavior in your code or find setup, usage, and deployment guidance in project docs.
         </p>
       </header>
 
@@ -48,11 +60,32 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
           type="search"
           value={query}
           onChange={event => setQuery(event.target.value)}
-          placeholder="e.g. where is user input checked?"
-          aria-label="Search code by natural language"
+          placeholder="e.g. where is input checked? or how do I deploy?"
+          aria-label="Search code and documentation by natural language"
           className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-3 text-sm text-zinc-800 outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-violet-500"
         />
       </label>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Search scope">
+        {([
+          { id: 'all', label: `All (${fileCounts.code + fileCounts.documentation})` },
+          { id: 'code', label: `Code (${fileCounts.code})` },
+          { id: 'documentation', label: `Docs (${fileCounts.documentation})` },
+        ] as const).map(option => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setSearchKind(option.id)}
+            aria-pressed={searchKind === option.id}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${searchKind === option.id
+              ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300'
+              : 'border-zinc-200 bg-white text-zinc-600 hover:border-violet-300 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-300'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
       {rewrittenQuery && rewrittenQuery !== query.trim().toLowerCase() && (
         <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">
@@ -102,9 +135,11 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
       ) : (
         <section aria-live="polite">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Relevant code</h3>
+            <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              Relevant {searchKind === 'documentation' ? 'documentation' : searchKind === 'code' ? 'code' : 'files'}
+            </h3>
             <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              {results.length} results across {fileCount} files
+              {results.length} results across {searchedFileCount} files
             </span>
           </div>
           {results.length ? (
@@ -116,6 +151,9 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">
+                        {result.kind === 'documentation' ? 'Documentation' : 'Code'}
+                      </span>
                       <p className="truncate font-mono text-xs text-zinc-500 dark:text-zinc-400" title={result.filePath}>
                         {result.filePath}
                       </p>
@@ -147,7 +185,7 @@ export default function ProjectSearch({ files, onOpenResult }: ProjectSearchProp
             </div>
           ) : (
             <p className="rounded-xl border border-dashed border-zinc-300 bg-white p-4 text-sm leading-6 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400">
-              No matching code found. Try describing a function, identifier, or behavior using different words.
+              No matching {searchKind === 'documentation' ? 'documentation' : searchKind === 'code' ? 'code' : 'files'} found. Try different wording or another search scope.
             </p>
           )}
         </section>

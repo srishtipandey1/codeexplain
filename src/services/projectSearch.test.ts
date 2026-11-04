@@ -27,6 +27,18 @@ const files: FileItem[] = [
       '    return sorted(items)',
     ].join('\n'),
   },
+  {
+    name: 'guide.md',
+    path: 'docs/guide.md',
+    isDirectory: false,
+    content: [
+      '# Project guide',
+      'An overview of the workspace.',
+      '',
+      '## Deployment',
+      'Run npm run build to create production assets.',
+    ].join('\n'),
+  },
 ];
 
 test('ranks a matching function for a natural-language query and preserves source lines', () => {
@@ -73,6 +85,20 @@ test('extracts code concepts with file and chunk counts', () => {
     ],
   );
   assert.ok(concepts.every(concept => concept.chunkCount > 0));
+});
+
+test('searches heading-based documentation chunks and filters by content type', () => {
+  const index = buildProjectSearchIndex(files);
+  const documentationResults = searchProjectIndex(index, 'how do I build for deployment', 8, 'documentation');
+  const codeResults = searchProjectIndex(index, 'how do I build for deployment', 8, 'code');
+  const allResults = searchProjectIndex(index, 'how do I build for deployment');
+
+  assert.equal(documentationResults[0]?.filePath, 'docs/guide.md');
+  assert.equal(documentationResults[0]?.kind, 'documentation');
+  assert.equal(documentationResults[0]?.symbol, 'Deployment');
+  assert.equal(documentationResults[0]?.lineStart, 4);
+  assert.equal(codeResults.length, 0);
+  assert.equal(allResults[0]?.kind, 'documentation');
 });
 
 test('returns no results for empty or unrelated queries', () => {

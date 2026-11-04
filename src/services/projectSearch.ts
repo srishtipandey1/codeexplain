@@ -1,5 +1,7 @@
 import type { FileItem } from '../components/FileExplorer';
 
+export type ProjectSearchKind = 'code' | 'documentation';
+
 export interface ProjectConcept {
   label: string;
   query: string;
@@ -9,6 +11,7 @@ export interface ProjectConcept {
 
 export interface ProjectSearchResult {
   filePath: string;
+  kind: ProjectSearchKind;
   symbol: string;
   lineStart: number;
   lineEnd: number;
@@ -79,39 +82,62 @@ function createFileChunks(file: FileItem): SearchDocument[] {
   if (file.isDirectory || !file.content.trim()) return [];
 
   const lines = file.content.split(/\r?\n/);
-  const declarations = lines.flatMap((line, index) => {
-    const match = line.match(DECLARATION_PATTERN);
-    return match ? [{ line: index, indent: line.length - line.trimStart().length, name: match[1] }] : [];
-  });
-
+  const kind: ProjectSearchKind = /\.(md|mdx|rst|txt)$/i.test(file.path) ? 'documentation' : 'code';
   const ranges: Array<{ start: number; end: number; symbol: string }> = [];
-  if (declarations.length) {
-    declarations.forEach((declaration, index) => {
-      const nextDeclaration = declarations.slice(index + 1).find(candidate => candidate.indent <= declaration.indent);
-      const end = Math.min(nextDeclaration?.line ?? lines.length, declaration.line + 79);
-      ranges.push({ start: declaration.line, end, symbol: declaration.name });
+
+  if (kind === 'documentation') {
+    const headings = lines.flatMap((line, index) => {
+      const match = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+      return match ? [{ line: index, title: match[2] }] : [];
+    });
+    const sectionStarts = headings.length ? headings.map(heading => heading.line) : [0];
+    if (sectionStarts[0] > 0) sectionStarts.unshift(0);
+
+    sectionStarts.forEach((start, index) => {
+      const sectionEnd = sectionStarts[index + 1] ?? lines.length;
+      const heading = headings.find(item => item.line === start);
+      for (let chunkStart = start; chunkStart < sectionEnd; chunkStart += 60) {
+        const end = Math.min(sectionEnd, chunkStart + 60);
+        ranges.push({
+          start: chunkStart,
+          end,
+          symbol: heading?.title ?? file.name,
+        });
+      }
     });
   } else {
-    const chunkSize = 60;
-    const overlap = 10;
-    for (let start = 0; start < lines.length; start += chunkSize - overlap) {
-      ranges.push({
-        start,
-        end: Math.min(lines.length, start + chunkSize),
-        symbol: file.name,
+    const declarations = lines.flatMap((line, index) => {
+      const match = line.match(DECLARATION_PATTERN);
+      return match ? [{ line: index, indent: line.length - line.trimStart().length, name: match[1] }] : [];
+    });
+
+    if (declarations.length) {
+      declarations.forEach((declaration, index) => {
+        const nextDeclaration = declarations.slice(index + 1).find(candidate => candidate.indent <= declaration.indent);
+        const end = Math.min(nextDeclaration?.line ?? lines.length, declaration.line + 79);
+        ranges.push({ start: declaration.line, end, symbol: declaration.name });
       });
+    } else {
+      const chunkSize = 60;
+      const overlap = 10;
+      for (let start = 0; start < lines.length; start += chunkSize - overlap) {
+        ranges.push({ start, end: Math.min(lines.length, start + chunkSize), symbol: file.name });
+      }
     }
   }
 
   return ranges.map(({ start, end, symbol }) => {
     const content = lines.slice(start, end).join('\n');
     const contentTerms = new Set(tokenize(content));
-    const concepts = CONCEPT_GROUPS
-      .filter(group => group.terms.flatMap(tokenize).some(term => contentTerms.has(term)))
-      .map(group => group.label);
+    const concepts = kind === 'code'
+      ? CONCEPT_GROUPS
+        .filter(group => group.terms.flatMap(tokenize).some(term => contentTerms.has(term)))
+        .map(group => group.label)
+      : [];
     const searchableText = `${file.path} ${symbol} ${content}`;
     return {
       filePath: file.path,
+      kind,
       symbol,
       lineStart: start + 1,
       lineEnd: end,
@@ -163,11 +189,18 @@ export function rewriteSearchQuery(query: string): string {
   return [...new Set(tokenize(query).filter(token => !QUERY_FILLER_WORDS.has(token)))].join(' ');
 }
 
-export function searchProjectIndex(index: ProjectSearchIndex, query: string, limit = 8): ProjectSearchResult[] {
+export function searchProjectIndex(
+  index: ProjectSearchIndex,
+  query: string,
+  limit = 8,
+  kind: ProjectSearchKind | 'all' = 'all',
+): ProjectSearchResult[] {
   const queryTerms = expandQueryTerms(rewriteSearchQuery(query));
   if (queryTerms.size === 0) return [];
 
-  const { documents, averageLength, documentFrequencies } = index;
+  const documents = kind === 'all'
+    ? index.documents
+    : index.documents.filter(document => document.kind === kind);
   if (documents.length === 0) return [];
 
   const scored = documents.map(document => {
@@ -181,9 +214,9 @@ export function searchProjectIndex(index: ProjectSearchIndex, query: string, lim
       if (!frequency) continue;
 
       matchedTerms.push(term);
-      const documentFrequency = documentFrequencies.get(term) ?? 0;
-      const inverseFrequency = Math.log(1 + (documents.length - documentFrequency + 0.5) / (documentFrequency + 0.5));
-      const lengthNormalization = 1.2 * (1 - 0.75 + 0.75 * document.tokens.length / averageLength);
+      const documentFrequency = index.documentFrequencies.get(term) ?? 0;
+      const inverseFrequency = Math.log(1 + (index.documents.length - documentFrequency + 0.5) / (documentFrequency + 0.5));
+      const lengthNormalization = 1.2 * (1 - 0.75 + 0.75 * document.tokens.length / index.averageLength);
       score += inverseFrequency * (frequency * 2.2) / (frequency + lengthNormalization);
     }
 

@@ -64,7 +64,7 @@ Use the contextual chat to ask questions about a snippet, a function, its variab
 
 ### Search your project in natural language
 
-Search the currently loaded project with questions such as “where is user input validated?” Queries are rewritten locally to remove question framing and generic code-search filler, then ranked with BM25 and code-aware identifier tokenization. Search runs in the browser against the files you have loaded; it does not send source code to the AI provider. This is lexical information retrieval rather than embedding-based vector search. The Search panel also surfaces heuristic code concepts—such as input validation, error handling, and sorting—with file counts; selecting a concept starts a focused search.
+Search the currently loaded project with questions such as “where is user input validated?” Queries are rewritten locally to remove question framing and generic code-search filler, then ranked with BM25 and code-aware identifier tokenization. Search runs in the browser against the files you have loaded; it does not send source code or documentation to the AI provider. Markdown (`.md`, `.mdx`), reStructuredText (`.rst`), and text (`.txt`) files are searchable separately from code. Markdown headings are used to form sections; other docs are chunked into bounded text sections. This is lexical information retrieval rather than embedding-based vector search. The Search panel also surfaces heuristic code concepts—such as input validation, error handling, and sorting—with file counts; selecting a concept starts a focused search.
 
 ### Learn and improve
 
