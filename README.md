@@ -1,116 +1,160 @@
-<div align="center">
-
 # CodeExplain
+
+CodeExplain is an interactive code workbench that addresses two related problems: finding the right code or project documentation from an intent-based question, and understanding a selected file without confusing approximate local analysis with compiler facts. It combines a **local, deterministic lexical retrieval and evaluation system** with a **separate, optional Groq-backed code-assistance layer**.
+
+The retrieval contribution is a complete system, not just a search box: it normalizes queries, expands a curated programming-concept vocabulary, chunks code and documentation, ranks chunks with BM25, returns source locations, and measures ranking against explicit relevance judgments. Search and its benchmark run in the browser without an API key or provider call. The optional provider path adds generated explanations and code suggestions; it is not part of the retrieval score.
 
 ![CodeExplain dashboard workspace showing a Python file in the editor](docs/codeexplain-workspace.png)
 
-The app opens on a landing page. Select **Start exploring** to enter the workspace shown here.
+## Problem and measurable objectives
 
-**Explore code. Understand its structure. Search by intent.**
+Exact filename or keyword lookup is a poor fit for questions such as “where is input validated?” Codebases also mix source files and human-written setup or design documents. CodeExplain implements these measurable objectives:
 
-An interactive code workbench with local NLP-powered project search and optional AI-assisted analysis.
+1. Index supported in-memory project files into searchable code and documentation chunks.
+2. Return up to eight positively scored results with file path, chunk label, matched query terms, snippet, and 1-based source-line range; allow opening a result at its starting line.
+3. Keep retrieval, concept suggestions, and benchmark execution local and independent of provider credentials.
+4. Make retrieval changes measurable with a fixed, checked-in benchmark and standard ranking metrics.
 
-[Get started](#get-started) · [Features](#features) · [NLP search](#nlp-powered-project-search) · [Privacy and costs](#privacy-and-costs)
+The benchmark currently covers six fixture files, twelve indexed chunks, and eleven queries at a default cutoff of three. Its measured values are reported below; these fixtures do not establish general accuracy on arbitrary repositories.
 
-</div>
+## Contributions
 
----
+| Contribution | Implementation |
+|---|---|
+| Local code-and-document retrieval: query rewriting, concept expansion, chunk construction, BM25 ranking, content filters, and deterministic suggestions. | [`searchEngine.ts`](./src/features/search/searchEngine.ts), [`ProjectSearch.tsx`](./src/features/search/ProjectSearch.tsx) |
+| A reproducible fixture benchmark with explicit relevant chunk IDs and per-query plus aggregate retrieval metrics. | [`searchEvaluation.ts`](./src/features/search/searchEvaluation.ts), [`SearchEvaluationPanel.tsx`](./src/features/search/SearchEvaluationPanel.tsx) |
+| Behavioral tests for ranking, line locations, query rewriting, suggestions, code/document filtering, and evaluation validation. | [`searchEngine.test.ts`](./src/features/search/searchEngine.test.ts), [`searchEvaluation.test.ts`](./src/features/search/searchEvaluation.test.ts) |
+| A lightweight local parser for approximate language detection, symbols, and code metrics, combined with provider-generated analysis when requested. | [`parser.ts`](./src/services/parser.ts), [`groq.ts`](./src/services/groq.ts), [`server.ts`](./server.ts) |
 
-## Overview
-
-CodeExplain opens with a focused landing page; select **Start exploring** to enter the interactive workspace. Browse files, inspect extracted symbols and approximate metrics, ask questions about the selected code in the inspector's **Chat** tab, and explore explanations, quality observations, optimization ideas, visualizations, and quizzes. The **Search** tab is a separate local code-and-document search tool.
-
-The project also includes a distinct local search and evaluation workflow. Search code and documentation with natural-language queries, inspect query normalization, and evaluate a BM25 retrieval baseline. **Search, query suggestions, and evaluation run locally and do not require an API key or send project files to an AI provider.**
-
-## Features
-
-- **Code workspace:** browse and edit files in a Monaco-based editor.
-- **Focused entry point:** start from a product landing page and open the workspace when you are ready to explore.
-- **One contextual chat:** ask questions about the selected code in the inspector's **Chat** tab. The **Search** tab finds matching files locally and is not another chatbot.
-- **Code understanding:** inspect approximate metrics, symbols, and relationships.
-- **Natural-language search:** retrieve relevant code and documentation with local BM25 ranking.
-- **Query suggestions:** expand search terms with a deterministic, local programming-concept vocabulary.
-- **Search evaluation:** measure the local baseline with a labeled benchmark and standard retrieval metrics.
-- **Optional AI assistance:** request explanations, chat, quizzes, refactoring, optimization, complexity analysis, flowcharts, and candidate tests.
-
-Generated explanations and suggestions are starting points, not authoritative results. Review them against the source code.
-
-## NLP-powered project search
-
-Search questions such as:
-
-- `where is user input validated?`
-- `how are errors handled?`
-- `find sorting logic`
-- `how do I configure deployment?`
-
-The search index supports code and documentation files (`.md`, `.mdx`, `.rst`, and `.txt`). Filter results by code, documentation, or both, and jump from a result to its source location.
-
-### Retrieval pipeline
+## Architecture and data flow
 
 ```mermaid
 flowchart LR
-    Q["Natural-language query"] --> N["Normalize terms and identifiers"]
-    N --> C["Local concept vocabulary"]
-    C --> R["BM25 ranking"]
-    F["Loaded code and documentation"] --> K["Chunk declarations and sections"]
-    K --> R
-    R --> S["Ranked results"]
-    R --> E["Benchmark metrics"]
+  subgraph Local["Local browser path"]
+    F["Loaded FileItem tree"] --> I["Flatten files and build chunks"]
+    I --> X["Tokenize, concepts, document frequencies"]
+    Q["Search question"] --> N["Rewrite and normalize"]
+    N --> E["Expand curated concept terms"]
+    X --> B["BM25 rank"]
+    E --> B
+    B --> R["Top results, snippets, source lines"]
+    F --> U["Search UI"]
+    R --> U
+    T["Fixed fixture corpus + relevance labels"] --> V["Evaluation runner"]
+    X -. benchmark index .-> V
+    V --> M["P@3, R@3, MRR, NDCG@3"]
+  end
+  subgraph Optional["Optional provider-backed path"]
+    W["Selected code and AI action"] --> A["Express API"]
+    A --> P["Local approximate parser for /api/analyze"]
+    A --> G["Groq chat-completions API over HTTPS"]
+    P --> G
+    G --> O["Generated explanation or suggestion"]
+    O --> W
+  end
 ```
 
-1. Normalize query text with tokenization, stop-word removal, camelCase splitting, and lightweight suffix handling.
-2. Relate programming terms with a small curated concept vocabulary.
-3. Split code into declaration-oriented chunks and documentation into bounded sections.
-4. Rank matching chunks with BM25 using term and document frequencies.
+In the local path, the search UI receives the loaded `FileItem[]`, builds an index, searches it synchronously, and opens a result using its file path and starting line. The benchmark independently builds an index from its own fixed fixture files; it does not score the currently loaded repository or the provider's output. In the optional path, Express accepts an AI action and the Groq service sends prompts and relevant code to Groq. `/api/analyze` first computes approximate local metrics and includes them in the provider prompt, then returns the provider report together with local parser data.
 
-This is lexical information retrieval. The project does not currently use vector embeddings or a separately trained NLP model.
+## Retrieval pipeline
 
-### Evaluation
+### Tokenization and normalization
 
-The Eval panel runs a fixed, human-labeled smoke benchmark containing 11 queries and six fixture files. It reports:
+`searchEngine.ts` lowercases text, separates lower-to-upper camelCase boundaries, and extracts `[a-z][a-z0-9]*` tokens. It applies simple suffix rules (`ing`, `ed`, `ies`, then plural `s`) and removes a fixed stop-word list and one-character tokens. Query rewriting also removes a separate set of question/filler words and deduplicates the remainder. These are deterministic lexical rules, not a learned language model or semantic embeddings.
 
-| Metric | What it measures |
-|---|---|
-| Precision@3 | Fraction of the top three results judged relevant |
-| Recall@3 | Fraction of known relevant items retrieved in the top three |
-| MRR | Average reciprocal rank of the first relevant result |
-| NDCG@3 | Rank-sensitive relevance score for the top three |
+### Concept vocabulary
 
-This small fixture benchmark is reproducible, but it is not evidence of broad real-world accuracy. More representative comparisons require a larger, carefully judged dataset. The benchmark scores the local BM25 baseline.
+Seven curated groups relate exact vocabulary within input validation, error handling, authentication, caching, sorting, testing, and parsing. Query expansion adds the group's terms when a normalized query term equals an alias or, for query terms of at least four characters, shares its first four characters with an alias. Suggestions are generated locally from the same groups and capped at three. The vocabulary supplies a small, inspectable synonym bridge; it does not infer arbitrary semantic similarity.
 
-## Privacy and costs
+### Chunking
 
-### Local features
+- **Code declarations:** recognize a fixed set of declaration keywords using a line regular expression, including `def`, `function`, `class`, `interface`, `struct`, `enum`, `type`, `const`, `let`, and `var`. A declaration chunk ends at the next declaration with indentation no deeper than its start, or at a maximum of 79 lines. This is declaration-oriented text chunking, not AST parsing.
+- **Code without recognized declarations:** use 60-line chunks with 10 lines of overlap (a 50-line stride).
+- **Markdown-like documentation (`.md`, `.mdx`, `.rst`, `.txt`):** split at Markdown headings; divide long sections into 60-line chunks. If there are no headings, chunk the whole file in 60-line pieces.
+- Every result retains a file path and 1-based start/end line numbers. Snippets show at most the first eight lines of a chunk.
 
-Project search, query suggestions, and evaluation run locally. They do not call Groq, require an API key, or send loaded project files to an AI provider.
+Other non-directory files are treated as code by the search index. The extension list above describes documentation classification, not a claim that every programming language has a dedicated parser.
 
-### Optional provider-backed AI
+### BM25 scoring
 
-The app's AI-assisted analysis, chat, quiz, refactoring, optimization, and related generation features use the Groq API. These features require a Groq API key and send the relevant code and prompts to Groq. Provider quotas and pricing depend on your account and may change; check the current terms before making requests.
+For each normalized query term \(t\) that appears in a chunk \(d\), the implementation adds:
 
-Do not submit secrets, credentials, personal data, or code you are not authorized to share with the provider.
+\[
+\operatorname{score}(d,q)=\sum_{t\in q\cap d}
+\underbrace{\ln\left(1+\frac{N-\operatorname{df}(t)+0.5}{\operatorname{df}(t)+0.5}\right)}_{\operatorname{IDF}(t)}
+\cdot
+\frac{f(t,d)(k_1+1)}
+{f(t,d)+k_1\left(1-b+b\frac{|d|}{\operatorname{avgdl}}\right)}
+\]
 
-## Get started
+Here, \(N\) is the number of indexed chunks, \(\operatorname{df}(t)\) is the number of chunks containing \(t\), \(f(t,d)\) is its frequency in the chunk, \(|d|\) is the token count of the indexed text (file path, chunk label, and chunk content), and \(\operatorname{avgdl}\) is average indexed-text length. The code fixes \(k_1=1.2\), \(b=0.75\), and \(k_1+1=2.2\). It scores the deduplicated expanded query terms, drops zero-score chunks, sorts descending by score (then file path), and returns at most eight results in the UI.
+
+**Worked example (illustrative, not a measured corpus result):** take \(N=4\), \(\operatorname{df}(t)=1\), \(f(t,d)=2\), \(|d|=20\), and \(\operatorname{avgdl}=40\). Then
+\[
+\operatorname{IDF}=\ln(1+3.5/1.5)\approx1.204,\quad
+\operatorname{lengthNorm}=1.2(1-0.75+0.75\cdot0.5)=0.75,
+\]
+\[
+\operatorname{TFNorm}=\frac{2\cdot2.2}{2+0.75}=1.6,\quad
+\operatorname{contribution}\approx1.204\cdot1.6=1.926.
+\]
+For a one-term query, this is the chunk's score. A real result score depends on the full index and all matching query terms.
+
+## Evaluation methodology and results
+
+The benchmark in `searchEvaluation.ts` creates six small source/documentation fixtures and eleven query cases. Each case lists the expected relevant `filePath::symbol` identifier directly in source. It evaluates the local BM25 ranking at \(k=3\); the React Eval panel invokes the same runner. The suite is reproducible and its fixed relevance labels are intended for regression detection and ranking verification, not as a representative sample of real repositories. **The code proves that labels are explicit and fixed, but cannot prove who assigned them; confirm they were human-judged before describing this as a human-labeled benchmark in the viva.** AI-generated query expansions are not included in the benchmark score.
+
+For each query, let \(R\) be the number of labeled relevant chunks and \(r\) be the number retrieved within the first \(k\):
+
+- \(\mathrm{Precision@k}=r/k\).
+- \(\mathrm{Recall@k}=r/R\).
+- \(\mathrm{RR}=1/\text{rank of first relevant result}\), or 0 if none is retrieved; \(\mathrm{MRR}\) is the mean RR across queries.
+- With binary relevance, \(\mathrm{DCG@k}=\sum_{i=1}^{k} rel_i/\log_2(i+1)\); \(\mathrm{NDCG@k}=\mathrm{DCG@k}/\mathrm{IDCG@k}\), where IDCG ranks up to \(\min(R,k)\) relevant items first.
+
+**Measured by running `runSearchEvaluation()` and `npm test` in this checkout:**
+
+| Corpus files | Indexed chunks | Queries | Precision@3 | Recall@3 | MRR | NDCG@3 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 6 | 12 | 11 | 0.333 | 1.000 | 0.909 | 0.933 |
+
+Each current query has one labeled relevant chunk, so Precision@3 is one-third when that item is found in the top three; it is not a statement that two-thirds of retrieved items are wrong across production use. The automated test asserts Recall@3 and MRR are each at least 0.7, along with metric bounds; it does not assert the displayed aggregate values exactly. Re-run `npm test` after retrieval changes and use the Eval panel to inspect per-query ranking. The extension plan is to add more human-judged queries and repositories, multiple relevant items, and hard negatives before comparing parameter settings or retrieval systems.
+
+## Design decisions and scope
+
+| Choice | Rationale and trade-off | Alternative considered | Planned extension |
+|---|---|---|---|
+| BM25 over lexical terms | Local, deterministic, explainable scores need no model download, key, or network. Curated aliases make a few domain relations explicit. | Embedding/vector retrieval can match paraphrases beyond vocabulary but adds a model, indexing cost, and evaluation requirements. | Expand the judged benchmark first; then compare a hybrid lexical/vector ranker against this baseline. |
+| Declaration-oriented bounded chunks | Search results identify a named code region and line range without requiring a compiler for each language. Regex boundaries are inexpensive but incomplete. | Language-specific AST parsing gives stronger syntactic boundaries at the cost of parser dependencies and language coverage work. | Add AST-backed chunking behind a parser interface for selected languages, retaining a bounded-text fallback. |
+| Lightweight parser and heuristic metrics | The app can show a quick local structural estimate without a compiler or external service. Pattern matching does not provide compiler-grade ASTs or reliable static analysis. | Compiler frontends or established parser libraries provide more accurate syntax and control-flow models but introduce language/toolchain dependencies. | Add syntax-derived relationships and validate metrics against language-specific fixtures. |
+| Optional Groq service | Provider-backed generation adds explanations and suggestions while keeping search usable without credentials. It sends relevant code and prompts to a third party and depends on account access, network, and provider behavior. | Fully local generation avoids sending code externally but requires a local model and additional resource/runtime support. | Keep provider use explicit; improve output validation and provider abstraction before adding another provider or a local model. |
+
+## Implementation provenance
+
+The repository source and package manifest identify files and dependencies, but do not establish who authored each project file or whether AI tools assisted. No claim that the student personally wrote—or did not use AI to generate—any listed file can be verified from these sources alone. **Complete this table from your actual workflow before the viva; do not treat repository presence as authorship evidence.**
+
+| File(s) | What the file implements | Personal / scaffolded / adapted / AI-assisted provenance |
+|---|---|---|
+| [`searchEngine.ts`](./src/features/search/searchEngine.ts), [`ProjectSearch.tsx`](./src/features/search/ProjectSearch.tsx) | Local retrieval engine and search interface | [FILL IN] |
+| [`searchEvaluation.ts`](./src/features/search/searchEvaluation.ts), [`SearchEvaluationPanel.tsx`](./src/features/search/SearchEvaluationPanel.tsx) | Fixed benchmark, metric calculations, and Eval interface | [FILL IN] |
+| [`searchEngine.test.ts`](./src/features/search/searchEngine.test.ts), [`searchEvaluation.test.ts`](./src/features/search/searchEvaluation.test.ts) | Automated retrieval/evaluation tests | [FILL IN] |
+| [`parser.ts`](./src/services/parser.ts), [`groq.ts`](./src/services/groq.ts), [`server.ts`](./server.ts) | Local heuristics, provider integration, and HTTP server | [FILL IN] |
+
+React, Vite, TypeScript, Express, Monaco Editor, and the other runtime/build packages are declared in [`package.json`](./package.json); their library code is dependency-provided, not this project's implementation. The exact origin of any starter scaffold, copied snippets, or generated sections needs to be recorded by the project author rather than inferred here.
+
+## Privacy, cost, and security
+
+- **Local path:** project search, query suggestions, concept extraction, and benchmark execution use local JavaScript functions over the supplied file data. They do not call Groq and need no API key.
+- **Provider path:** when an AI action is invoked, relevant source code and prompts are sent by the server to Groq's chat-completions endpoint over HTTPS. `/api/analyze` sends the code and local metrics; chat includes selected code, the latest question, and up to six history messages (with per-message truncation). Do not send secrets or code you are not authorized to share.
+- **Credential handling:** configure `GROQ_API_KEY` in the server environment or root `.env`; keep `.env` out of version control. `GROQ_MODEL` optionally overrides the default `openai/gpt-oss-120b`. Usage, quotas, and cost are controlled by Groq and your account; this repository does not calculate or guarantee provider charges.
+- **Deployment boundary:** the Express server listens on `0.0.0.0:3000`, accepts JSON and URL-encoded bodies up to 20 MB, and the inspected server has no request authentication or rate limiter. Do not expose it as a public service without adding appropriate access controls, abuse limits, and deployment configuration. Generated analysis, refactoring, tests, and complexity claims require human review.
+
+## Setup and usage
 
 ### Requirements
 
-- Node.js 18 or newer
-- npm
-- Optional: a Groq API key for provider-backed AI features
+Install Node.js and npm. `package.json` does not declare a tested Node version range. A Groq API key is optional and is only needed for provider-backed actions.
 
-### Install and run
-
-```bash
-git clone https://github.com/srishtipandey1/codeexplain.git
-cd codeexplain
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000). You can use local search and evaluation without configuring an API key.
-
-### Windows PowerShell
+### Install and run locally
 
 ```powershell
 git clone https://github.com/srishtipandey1/codeexplain.git
@@ -119,157 +163,48 @@ npm install
 npm run dev
 ```
 
-### Optional AI setup
+Open [http://localhost:3000](http://localhost:3000), choose **Start exploring**, then use the **Search** tab for local project retrieval or **Eval** to inspect the fixed benchmark. Search works without `.env` or a Groq key.
 
-Create a `.env` file in the project root and configure your Groq key if you want to use provider-backed features:
-
-```env
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=openai/gpt-oss-120b
-```
-
-The repository includes an `.env.example` template. On Windows PowerShell, copy it with:
+To enable provider-backed actions, copy the example and add your key:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Replace the placeholder with your own key. Keep `.env` private and never commit API keys.
+Set `GROQ_API_KEY` in `.env`; optionally set `GROQ_MODEL`. Never commit `.env`.
 
-## Commands
+### Commands
 
-| Command | Description |
+| Command | Effect |
 |---|---|
-| `npm run dev` | Start the development server with Vite middleware |
-| `npm test` | Run project-search and retrieval-evaluation tests |
-| `npm run lint` | Run the TypeScript check |
-| `npm run build` | Build the frontend and production server |
-| `npm run start` | Run the production server on port 3000 |
+| `npm run dev` | Run Express with Vite development middleware on port 3000. |
+| `npm test` | Run the search engine and evaluation tests with Node's test runner through `tsx`. |
+| `npm run lint` | Run `tsc --noEmit` (TypeScript check). |
+| `npm run build` | Build the Vite frontend and bundle the production server to `dist/server.cjs`. |
+| `npm run start` | Run the production server; run `npm run build` first. |
 
-Build and run for production:
+The current checkout passed all ten tests, `npm run lint`, and `npm run build`. The production build reports a Vite warning that the minified JavaScript chunk exceeds 500 kB; the build still succeeds.
 
-```bash
-npm run build
-npm run start
-```
+## Future work (ordered)
 
-## Supported language detection
+1. **Broaden evaluation first:** grow the human-judged query set across real target repositories, record multiple relevant chunks and hard negatives, and preserve the current benchmark as a regression baseline. This addresses the fixture benchmark's limited generalizability.
+2. **Improve code boundaries and relationships:** add AST-backed chunking and derive call/dependency edges from syntax. This addresses declaration-regex and lightweight-parser limitations.
+3. **Compare retrieval methods:** tune BM25 only against judged cases, then test optional hybrid/vector retrieval against the lexical baseline. This preserves measurable comparison rather than replacing an explainable system on intuition.
+4. **Harden optional provider deployment:** validate provider output at runtime, add authentication and rate limiting, and make deployment network exposure configurable. This follows from the current provider and server boundaries.
+5. **Record provenance and license:** document per-file authorship/tool assistance and add a license only after the project owner selects one.
 
-Detection is based primarily on file extensions, with a small set of content checks as a fallback. Recognition does not imply compiler-grade parsing.
+## Glossary
 
-| Language | Extensions |
+| Term | Meaning in this project |
 |---|---|
-| Python | `.py`, `.ipynb` |
-| JavaScript | `.js`, `.jsx`, `.mjs` |
-| TypeScript | `.ts`, `.tsx` |
-| Java | `.java` |
-| C | `.c`, `.h` |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp` |
-| Go | `.go` |
-| Rust | `.rs` |
-| Kotlin | `.kt`, `.kts` |
-| Swift | `.swift` |
-| PHP | `.php` |
-| Ruby | `.rb`, `.gemspec` |
-
-## Architecture
-
-```mermaid
-flowchart TB
-    subgraph Local["Local workflow"]
-        A["Project files"] --> B["Lightweight parsing and metrics"]
-        A --> C["Query normalization and BM25"]
-        C --> D["Search results and evaluation"]
-        B --> E["CodeExplain workspace"]
-        D --> E
-    end
-    subgraph Optional["Optional provider-backed workflow"]
-        E -->|AI feature requested| F["Express API"]
-        F --> G["Groq API"]
-        G --> H["Generated explanation or suggestion"]
-        H --> E
-    end
-```
-
-The local parser estimates structure, symbols, and metrics; it is not a full compiler-grade abstract syntax tree.
-
-### Technology
-
-- React 19, TypeScript, and Vite 6
-- Monaco Editor
-- Tailwind CSS 4, Motion, and Lucide React
-- Node.js and Express 4
-- Local BM25 retrieval and deterministic text normalization
-- Optional Groq chat-completions API
-
-### API routes
-
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/health` | Server health check |
-| `POST` | `/api/analyze` | Local metrics and AI-assisted code analysis |
-| `POST` | `/api/chat` | Ask questions about code |
-| `POST` | `/api/quiz` | Generate code-based questions |
-| `POST` | `/api/optimize` | Request performance suggestions |
-| `POST` | `/api/refactor` | Request refactored code and a change summary |
-| `POST` | `/api/complexity` | Analyze time and space complexity |
-| `POST` | `/api/flowchart` | Generate a Mermaid flowchart |
-| `POST` | `/api/tests` | Generate candidate test cases |
-
-These API routes use provider-backed features and require `GROQ_API_KEY`, except for `/api/health`. Project search and evaluation run locally in the browser.
-
-## Project structure
-
-```text
-codeexplain/
-├── docs/
-│   └── codeexplain-workspace.png
-├── server.ts
-├── vite.config.ts
-├── src/
-│   ├── app/
-│   │   ├── App.tsx
-│   │   └── WelcomePage.tsx
-│   ├── components/               # File explorer, command palette, exports
-│   ├── features/
-│   │   ├── search/
-│   │   │   ├── ProjectSearch.tsx
-│   │   │   ├── SearchEvaluationPanel.tsx
-│   │   │   ├── searchEngine.ts  # BM25 index and local query suggestions
-│   │   │   └── searchEvaluation.ts
-│   │   ├── learning/            # QuizPanel
-│   │   └── visualization/       # InteractiveVisualization
-│   ├── services/                 # API integration and local parsing
-│   ├── types/                    # Shared TypeScript types
-│   ├── main.tsx                  # React application entry point
-│   └── index.css
-├── .env.example
-└── package.json
-```
-
-## Troubleshooting
-
-### Local search works, but an AI feature fails
-
-Local search does not need a key. For provider-backed features, check that `.env` is in the project root, `GROQ_API_KEY` is valid, your network can reach Groq, and your account can access the configured model.
-
-### The app does not open on port 3000
-
-Confirm that the server started successfully. If another process is already using port `3000`, stop that process or change the port in `server.ts`.
-
-### Language detection looks wrong
-
-Use a recognized file extension where possible. Content-based detection is heuristic and falls back to JavaScript when it cannot identify a language.
-
-## Contributing
-
-1. Install dependencies with `npm install`.
-2. Run `npm test` and `npm run lint`.
-3. Run `npm run build` to validate the production bundle.
-4. Describe your changes and how you tested them.
-
-Do not commit `.env` files, API keys, or other credentials.
+| BM25 | Lexical ranking function using term frequency, inverse document frequency, and document-length normalization. |
+| Chunk | Indexed code declaration/text window or documentation section with source line boundaries. |
+| `df(t)` | Number of indexed chunks containing term \(t\). |
+| IDCG / NDCG | Ideal discounted cumulative gain / normalized discounted cumulative gain; rank-sensitive relevance metrics. |
+| MRR | Mean reciprocal rank of the first relevant result across benchmark queries. |
+| Precision@k / Recall@k | Relevant retrieved items divided by \(k\) / relevant retrieved items divided by all labeled relevant items. |
+| Local | Executed in the browser from supplied file contents, without a provider request. |
 
 ## License
 
-No `LICENSE` file is currently included in this repository. Check with the maintainers before reusing or distributing the project.
+No `LICENSE` file is present in this repository. No open-source reuse or redistribution license is asserted here. The project owner should choose and add a license before granting reuse rights.
