@@ -80,41 +80,59 @@ Other non-directory files are indexed as code.
 
 ### BM25 scoring
 
-For each normalized query term \(t\) that appears in a chunk \(d\), the ranker adds:
+For each normalized query term that appears in a chunk, the ranker adds:
 
-\[
-\operatorname{score}(d,q)=\sum_{t\in q\cap d}
-\underbrace{\ln\left(1+\frac{N-\operatorname{df}(t)+0.5}{\operatorname{df}(t)+0.5}\right)}_{\operatorname{IDF}(t)}
-\cdot
-\frac{f(t,d)(k_1+1)}
-{f(t,d)+k_1\left(1-b+b\frac{|d|}{\operatorname{avgdl}}\right)}
-\]
+```
+score(chunk, query) = sum over each query term t found in the chunk of
+IDF(t) * TF(t)
 
-Here, \(N\) is the indexed chunk count, \(\operatorname{df}(t)\) is the number of chunks containing \(t\), and \(f(t,d)\) is the term frequency in the chunk. The indexed text includes the file path, chunk label, and chunk content; \(|d|\) is its token count, and \(\operatorname{avgdl}\) is the average indexed-text length. We use \(k_1=1.2\), \(b=0.75\), and \(k_1+1=2.2\). The ranker scores deduplicated expanded query terms, removes zero-score chunks, sorts by descending score with file path as the tie-breaker, and the interface displays up to eight results.
+IDF(t) = ln( 1 + (N - df + 0.5) / (df + 0.5) )
+TF(t)  = f * (k1 + 1) / ( f + k1 * (1 - b + b * len / avglen) )
+```
 
-**Worked example:** for \(N=4\), \(\operatorname{df}(t)=1\), \(f(t,d)=2\), \(|d|=20\), and \(\operatorname{avgdl}=40\):
+score = BM25 relevance score for this chunk and query
+chunk = one indexed code or documentation chunk
+query = normalized and expanded search terms
+t = one query term that appears in the chunk
+IDF(t) = inverse document frequency of the term
+TF(t) = length-normalized frequency of the term in this chunk
+N = total number of chunks in the index
+df = number of chunks that contain the term
+f = number of times the term appears in this chunk
+len = length of this chunk in tokens
+avglen = average chunk length across the index
+k1 = 1.2 (limits how much repeated terms help)
+b = 0.75 (controls how much long chunks are penalized)
 
-\[
-\operatorname{IDF}=\ln(1+3.5/1.5)\approx1.204,\quad
-\operatorname{lengthNorm}=1.2(1-0.75+0.75\cdot0.5)=0.75,
-\]
-\[
-\operatorname{TFNorm}=\frac{2\cdot2.2}{2+0.75}=1.6,\quad
-\operatorname{contribution}\approx1.204\cdot1.6=1.926.
-\]
+The indexed text includes the file path, chunk label, and chunk content. The ranker scores deduplicated expanded query terms, removes zero-score chunks, sorts by descending score with file path as the tie-breaker, and the interface displays up to eight results.
+
+**Worked example:** for N = 4, df = 1, f = 2, len = 20, and avglen = 40:
+
+```
+IDF = ln(1 + (4 - 1 + 0.5) / (1 + 0.5)) = ln(3.33) = about 1.204
+TF  = 2 * 2.2 / (2 + 1.2 * (1 - 0.75 + 0.75 * 0.5)) = 4.4 / 2.75 = 1.6
+Contribution of this term = 1.204 * 1.6 = about 1.926
+```
 
 For a one-term query, the chunk score is approximately 1.926.
 
 ## Evaluation methodology and results
 
-The benchmark uses six code and documentation fixture files, twelve indexed chunks, and eleven queries. Each query has a fixed relevant `filePath::symbol` target. The runner evaluates rankings at \(k=3\) and reports per-query metrics and their averages. The Eval panel displays aggregate scores and individual query ranks.
+The benchmark uses six code and documentation fixture files, twelve indexed chunks, and eleven queries. Each query has a fixed relevant `filePath::symbol` target. The runner evaluates rankings at k = 3 and reports per-query metrics and their averages. The Eval panel displays aggregate scores and individual query ranks.
 
-For a query, let \(R\) be the number of labeled relevant chunks and \(r\) be the relevant chunks retrieved within the first \(k\):
+For each query, Precision@3, Recall@3, and NDCG@3 use the first three results. Reciprocal rank uses the rank of the first relevant result:
 
-- \(\mathrm{Precision@k}=r/k\).
-- \(\mathrm{Recall@k}=r/R\).
-- \(\mathrm{RR}=1/\text{rank of the first relevant result}\), or 0 if no relevant result is retrieved; \(\mathrm{MRR}\) is the mean RR across queries.
-- With binary relevance, \(\mathrm{DCG@k}=\sum_{i=1}^{k} rel_i/\log_2(i+1)\); \(\mathrm{NDCG@k}=\mathrm{DCG@k}/\mathrm{IDCG@k}\), where IDCG places up to \(\min(R,k)\) relevant items first.
+```
+Precision@3 = relevant results in the first 3 / 3
+Recall@3 = relevant results in the first 3 / total relevant results
+RR = 1 / rank of the first relevant result, or 0 if none is retrieved
+MRR = sum of RR across all queries / number of queries
+DCG@3 = rel(1) + rel(2) * ln(2) / ln(3) + rel(3) * ln(2) / ln(4)
+IDCG@3 = idealRel(1) + idealRel(2) * ln(2) / ln(3) + idealRel(3) * ln(2) / ln(4)
+NDCG@3 = DCG@3 / IDCG@3
+```
+
+Variable key: relevant results = retrieved chunks with a fixed relevant label; total relevant results = all chunks labeled relevant for this query; rank = position of the first relevant result, starting at 1; RR = reciprocal rank for one query; i = result position from 1 to 3; rel(i) = 1 if the result at rank i is relevant, otherwise 0; idealRel(i) = 1 if rank i contains a relevant result in the ideal ranking, otherwise 0; DCG@3 = discounted cumulative gain at rank 3; IDCG@3 = DCG@3 for the ideal ranking, with relevant results placed first; NDCG@3 = DCG@3 divided by IDCG@3.
 
 | Corpus files | Indexed chunks | Queries | Precision@3 | Recall@3 | MRR | NDCG@3 |
 |---:|---:|---:|---:|---:|---:|---:|
@@ -202,10 +220,10 @@ Copy-Item .env.example .env
 |---|---|
 | BM25 | Lexical ranking function using term frequency, inverse document frequency, and document-length normalization. |
 | Chunk | Indexed code declaration/text window or documentation section with source-line boundaries. |
-| `df(t)` | Number of indexed chunks containing term \(t\). |
+| `df(t)` | Number of indexed chunks containing term t. |
 | IDCG / NDCG | Ideal discounted cumulative gain / normalized discounted cumulative gain. |
 | MRR | Mean reciprocal rank of the first relevant result across benchmark queries. |
-| Precision@k / Recall@k | Relevant retrieved items divided by \(k\) / relevant retrieved items divided by all labeled relevant items. |
+| Precision@k / Recall@k | Relevant retrieved items divided by k / relevant retrieved items divided by all labeled relevant items. |
 | Local | Executed in the browser over supplied file contents, without a provider request. |
 
 ## License
