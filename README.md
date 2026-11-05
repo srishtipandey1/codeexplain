@@ -228,4 +228,4 @@ Copy-Item .env.example .env
 
 ## License
 
-No license is declared for this project.
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).
